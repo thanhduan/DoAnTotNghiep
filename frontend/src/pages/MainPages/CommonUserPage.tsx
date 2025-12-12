@@ -34,7 +34,7 @@ const CommonUserPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm">
-              {user?.role === 'lecturer' ? 'Mã GV:' : user?.role === 'student' ? 'Mã SV:' : 'Mã NV:'}
+              {user?.role === 'lecturer' ? 'Mã GV:' : user?.role === 'education_officer' ? 'Mã NV:' : 'Mã SV:'}
             </span>
             <span className="font-semibold">
               {user?.employeeId || user?.studentId || 'N/A'}
