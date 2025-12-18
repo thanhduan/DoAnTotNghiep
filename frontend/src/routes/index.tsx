@@ -10,6 +10,7 @@ import LoginPage from '../pages/LoginPage';
 import AuthCallbackPage from '../pages/AuthCallbackPage';
 import DashboardPage from '../pages/Admin/DashboardPage';
 import UserManagementPage from '../pages/Admin/UserManagementPage';
+import LockerManagementPage from '../pages/Admin/LockerManagementPage';
 import CommonUserPage from '../pages/MainPages/CommonUserPage';
 
 const AppRoutes: React.FC = () => {
@@ -39,6 +40,17 @@ const AppRoutes: React.FC = () => {
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminLayout>
                   <UserManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/lockers"
+            element={
+              <ProtectedRoute allowedRoles={[ 'admin' ]}>
+                <AdminLayout>
+                  <LockerManagementPage />
                 </AdminLayout>
               </ProtectedRoute>
             }

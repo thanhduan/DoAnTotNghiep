@@ -10,6 +10,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', path: '/dashboard', icon: '📊' },
     { name: 'Phòng học', path: '/rooms', icon: '🏛️' },
+    { name: 'Tủ khóa', path: '/lockers', icon: '🗄️' },
     { name: 'Lịch học', path: '/schedules', icon: '📅' },
     { name: 'Đặt phòng', path: '/bookings', icon: '📝' },
     { name: 'Người dùng', path: '/users', icon: '👥' },
