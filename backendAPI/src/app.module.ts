@@ -7,6 +7,7 @@ import { GatewaysModule } from './common/gateways/gateways.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CampusModule } from './modules/campus/campus.module';
 import { UsersModule } from './modules/users/users.module';
+import { LockerModule } from './modules/locker/locker.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     CampusModule,
     UsersModule,
+    LockerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -90,4 +90,3 @@ export interface UserListItem {
   createdAt: string;
   updatedAt: string;
 }
-
