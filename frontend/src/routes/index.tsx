@@ -11,6 +11,7 @@ import AuthCallbackPage from '../pages/AuthCallbackPage';
 import DashboardPage from '../pages/Admin/DashboardPage';
 import UserManagementPage from '../pages/Admin/UserManagementPage';
 import LockerManagementPage from '../pages/Admin/LockerManagementPage';
+import RoomManagementPage from '../pages/Admin/RoomManagementPage';
 import CommonUserPage from '../pages/MainPages/CommonUserPage';
 
 const AppRoutes: React.FC = () => {
@@ -61,10 +62,7 @@ const AppRoutes: React.FC = () => {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminLayout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Quản lý Phòng học</h2>
-                    <p className="mt-2 text-gray-600">Trang này đang được phát triển</p>
-                  </div>
+                  <RoomManagementPage />
                 </AdminLayout>
               </ProtectedRoute>
             }
