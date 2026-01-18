@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AdminLayout from '../layouts/AdminLayout';
-import CommonUserLayout from '../layouts/CommonUserLayout';
+import { PERMISSIONS } from '../utils/permissions';
 
 // Pages
 import LoginPage from '../pages/LoginPage';
@@ -11,7 +11,7 @@ import AuthCallbackPage from '../pages/AuthCallbackPage';
 import DashboardPage from '../pages/Admin/DashboardPage';
 import UserManagementPage from '../pages/Admin/UserManagementPage';
 import LockerManagementPage from '../pages/Admin/LockerManagementPage';
-import CommonUserPage from '../pages/MainPages/CommonUserPage';
+import RoleManagementPage from '../pages/Admin/RoleManagementPage';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -22,11 +22,11 @@ const AppRoutes: React.FC = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           
-          {/* Admin Routes - Only for admin and training_staff */}
+          {/* Admin Routes - Permission-based access (Super Admin, Campus Admin, Training Officer) */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute>
                 <AdminLayout>
                   <DashboardPage />
                 </AdminLayout>
@@ -37,7 +37,9 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/users"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.USERS_READ]}
+              >
                 <AdminLayout>
                   <UserManagementPage />
                 </AdminLayout>
@@ -48,7 +50,7 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/lockers"
             element={
-              <ProtectedRoute allowedRoles={[ 'admin' ]}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <AdminLayout>
                   <LockerManagementPage />
                 </AdminLayout>
@@ -57,9 +59,24 @@ const AppRoutes: React.FC = () => {
           />
           
           <Route
+            path="/roles"
+            element={
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.ROLES_READ]}
+              >
+                <AdminLayout>
+                  <RoleManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/rooms"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.ROOMS_READ]}
+              >
                 <AdminLayout>
                   <div className="text-center py-12">
                     <h2 className="text-2xl font-bold text-gray-900">Quản lý Phòng học</h2>
@@ -73,7 +90,9 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/schedules"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.SCHEDULES_READ]}
+              >
                 <AdminLayout>
                   <div className="text-center py-12">
                     <h2 className="text-2xl font-bold text-gray-900">Lịch học</h2>
@@ -87,7 +106,9 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/bookings"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.BOOKINGS_READ]}
+              >
                 <AdminLayout>
                   <div className="text-center py-12">
                     <h2 className="text-2xl font-bold text-gray-900">Đặt phòng</h2>
@@ -101,7 +122,9 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/settings"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.SETTINGS_UPDATE]}
+              >
                 <AdminLayout>
                   <div className="text-center py-12">
                     <h2 className="text-2xl font-bold text-gray-900">Cài đặt</h2>
@@ -111,64 +134,10 @@ const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             }
           />
-          
-          {/* Common User Routes - For lecturer, student */}
-          <Route
-            path="/home"
-            element={
-              <ProtectedRoute allowedRoles={['lecturer', 'education_officer']}>
-                <CommonUserLayout>
-                  <CommonUserPage />
-                </CommonUserLayout>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/my-schedules"
-            element={
-              <ProtectedRoute allowedRoles={['lecturer', 'education_officer']}>
-                <CommonUserLayout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Lịch học</h2>
-                    <p className="mt-2 text-gray-600">Trang này đang được phát triển</p>
-                  </div>
-                </CommonUserLayout>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/my-bookings"
-            element={
-              <ProtectedRoute allowedRoles={['lecturer', 'education_officer']}>
-                <CommonUserLayout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Thông báo đơn duyệt</h2>
-                    <p className="mt-2 text-gray-600">Trang này đang được phát triển</p>
-                  </div>
-                </CommonUserLayout>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/history"
-            element={
-              <ProtectedRoute allowedRoles={['lecturer', 'education_officer']}>
-                <CommonUserLayout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Lịch sử</h2>
-                    <p className="mt-2 text-gray-600">Trang này đang được phát triển</p>
-                  </div>
-                </CommonUserLayout>
-              </ProtectedRoute>
-            }
-          />
 
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

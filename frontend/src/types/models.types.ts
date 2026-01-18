@@ -80,7 +80,12 @@ export interface UserListItem {
   email: string;
   fullName: string;
   avatar?: string;
-  role: 'admin' | 'training_staff' | 'lecturer' | 'student';
+  roleId?: {
+    _id: string;
+    roleName: string;
+    roleCode: string;
+    roleLevel: number;
+  };
   employeeId?: string;
   studentId?: string;
   department?: string;

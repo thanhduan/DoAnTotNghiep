@@ -9,6 +9,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '@/database/schemas/user.schema';
 import { Campus } from '@/database/schemas/campus.schema';
+import { Role } from '@/database/schemas/role.schema';
+import { Permission } from '@/database/schemas/permission.schema';
+import { RolePermission } from '@/database/schemas/role-permission.schema';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { JwtPayload } from '@/common/interfaces/auth.interface';
 
@@ -17,6 +20,9 @@ export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Campus.name) private campusModel: Model<Campus>,
+    @InjectModel(Role.name) private roleModel: Model<Role>,
+    @InjectModel(Permission.name) private permissionModel: Model<Permission>,
+    @InjectModel(RolePermission.name) private rolePermissionModel: Model<RolePermission>,
     private jwtService: JwtService,
   ) {}
 
@@ -74,22 +80,66 @@ export class AuthService {
       }
     }
 
-    // 5. Generate JWT token
+    // 5. Populate campus data and role for JWT
+    const populatedUser = await this.userModel
+      .findById(user._id)
+      .populate('campusId', 'campusCode campusName address')
+      .populate('roleId', 'roleCode roleLevel roleName')
+      .exec();
+
+    // 6. Get permissions for this role
+    let roleDetails = null;
+    let permissions = [];
+    let permissionCodes = [];
+
+    if (populatedUser.roleId) {
+      const role = populatedUser.roleId as any;
+      roleDetails = {
+        id: role._id.toString(),
+        roleCode: role.roleCode,
+        roleName: role.roleName,
+        roleLevel: role.roleLevel,
+        description: role.description,
+      };
+
+      // Get role-permission mappings
+      const rolePermissions = await this.rolePermissionModel
+        .find({ roleId: role._id })
+        .populate('permissionId')
+        .exec();
+
+      // Extract permission details
+      permissions = rolePermissions
+        .filter(rp => rp.permissionId) // Ensure permission exists
+        .map(rp => {
+          const perm = rp.permissionId as any;
+          return {
+            id: perm._id.toString(),
+            permissionCode: perm.permissionCode,
+            permissionName: perm.permissionName,
+            resource: perm.resource,
+            action: perm.action,
+            description: perm.description,
+          };
+        });
+
+      // Extract permission names for JWT (not codes!)
+      permissionCodes = permissions.map(p => p.permissionName);
+    }
+
+    // 7. Generate JWT token with full payload
     const payload: JwtPayload = {
-      sub: user._id.toString(),
-      email: user.email,
-      role: user.role,
+      sub: populatedUser._id.toString(),
+      email: populatedUser.email,
+      roleCode: roleDetails?.roleCode || 'STUDENT',
+      roleLevel: roleDetails?.roleLevel || 4,
+      campusId: populatedUser.campusId?._id?.toString() || null,
+      permissions: permissionCodes,
     };
 
     const accessToken = this.jwtService.sign(payload);
 
-    // 6. Populate campus data for frontend
-    const populatedUser = await this.userModel
-      .findById(user._id)
-      .populate('campusId', 'campusCode campusName address')
-      .exec();
-
-    // 7. Return response
+    // 8. Return response with role and permissions
     return {
       success: true,
       accessToken,
@@ -98,29 +148,67 @@ export class AuthService {
         email: populatedUser.email,
         fullName: populatedUser.fullName,
         avatar: populatedUser.avatar,
-        role: populatedUser.role,
+        roleId: populatedUser.roleId ? (populatedUser.roleId as any)._id.toString() : undefined,
         campusId: populatedUser.campusId, // Return full campus object
       },
+      roleDetails,
+      permissions,
     };
   }
 
   /**
-   * Get user profile
+   * Get user profile with role and permissions
    */
   async getProfile(userId: string) {
     const user = await this.userModel
       .findById(userId)
       .select('-faceData -fingerprintData -googleId')
       .populate('campusId', 'campusCode campusName address')
+      .populate('roleId')
       .exec();
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
+    // Get permissions for this role
+    let roleDetails = null;
+    let permissions = [];
+
+    if (user.roleId) {
+      const role = user.roleId as any;
+      roleDetails = {
+        id: role._id.toString(),
+        roleName: role.roleName,
+        description: role.description,
+      };
+
+      // Get role-permission mappings
+      const rolePermissions = await this.rolePermissionModel
+        .find({ roleId: role._id })
+        .populate('permissionId')
+        .exec();
+
+      // Extract permission details
+      permissions = rolePermissions
+        .filter(rp => rp.permissionId)
+        .map(rp => {
+          const perm = rp.permissionId as any;
+          return {
+            id: perm._id.toString(),
+            permissionName: perm.permissionName,
+            resource: perm.resource,
+            action: perm.action,
+            description: perm.description,
+          };
+        });
+    }
+
     return {
       success: true,
       data: user,
+      roleDetails,
+      permissions,
     };
   }
 

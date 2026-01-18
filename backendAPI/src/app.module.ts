@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CampusModule } from './modules/campus/campus.module';
 import { UsersModule } from './modules/users/users.module';
 import { LockerModule } from './modules/locker/locker.module';
+import { RolesModule } from './modules/roles/roles.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LockerModule } from './modules/locker/locker.module';
     CampusModule,
     UsersModule,
     LockerModule,
+    RolesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

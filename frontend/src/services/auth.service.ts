@@ -1,5 +1,5 @@
 import apiService from './api.service';
-import { User, Campus } from '../types/auth.types';
+import { User, Campus, Permission, RoleDetails } from '../types/auth.types';
 import { STORAGE_KEYS } from '../constants';
 
 class AuthService {
@@ -21,9 +21,19 @@ class AuthService {
     }
   }
 
-  async getCurrentUser(): Promise<User> {
-    const response = await apiService.get<{ success: boolean; data: User }>('/auth/profile');
-    return response.data;
+  async getCurrentUser(): Promise<{ user: User; roleDetails: RoleDetails | null; permissions: Permission[] }> {
+    const response = await apiService.get<{ 
+      success: boolean; 
+      data: User;
+      roleDetails?: RoleDetails;
+      permissions?: Permission[];
+    }>('/auth/profile');
+    
+    return {
+      user: response.data,
+      roleDetails: response.roleDetails || null,
+      permissions: response.permissions || [],
+    };
   }
 
   async checkAuth(): Promise<boolean> {
@@ -52,8 +62,47 @@ class AuthService {
     return userData ? JSON.parse(userData) : null;
   }
 
+  saveRoleDetails(roleDetails: RoleDetails | null): void {
+    if (roleDetails) {
+      localStorage.setItem(STORAGE_KEYS.ROLE_DETAILS, JSON.stringify(roleDetails));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.ROLE_DETAILS);
+    }
+  }
+
+  getRoleDetails(): RoleDetails | null {
+    const roleData = localStorage.getItem(STORAGE_KEYS.ROLE_DETAILS);
+    return roleData ? JSON.parse(roleData) : null;
+  }
+
+  savePermissions(permissions: Permission[]): void {
+    localStorage.setItem(STORAGE_KEYS.PERMISSIONS, JSON.stringify(permissions));
+  }
+
+  getPermissions(): Permission[] {
+    const permData = localStorage.getItem(STORAGE_KEYS.PERMISSIONS);
+    return permData ? JSON.parse(permData) : [];
+  }
+
   isAuthenticated(): boolean {
     return !!this.getToken();
+  }
+
+  // Permission check helpers
+  hasPermission(permissionName: string, permissions: Permission[]): boolean {
+    return permissions.some(p => p.permissionName === permissionName);
+  }
+
+  hasAnyPermission(permissionNames: string[], permissions: Permission[]): boolean {
+    return permissionNames.some(name => this.hasPermission(name, permissions));
+  }
+
+  hasAllPermissions(permissionNames: string[], permissions: Permission[]): boolean {
+    return permissionNames.every(name => this.hasPermission(name, permissions));
+  }
+
+  canAccessResource(resource: string, action: string, permissions: Permission[]): boolean {
+    return permissions.some(p => p.resource === resource && p.action === action);
   }
 }
 

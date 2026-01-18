@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, AuthState } from '../types/auth.types';
+import { User, AuthState, Permission, RoleDetails } from '../types/auth.types';
 import { authService } from '../services/auth.service';
 
 interface AuthContextType extends AuthState {
-  login: (token: string, user: User) => void;
+  login: (token: string, user: User, roleDetails?: RoleDetails, permissions?: Permission[]) => void;
   logout: () => void;
   fetchUserProfile: () => Promise<void>;
+  hasPermission: (permissionName: string) => boolean;
+  hasAnyPermission: (permissionNames: string[]) => boolean;
+  hasAllPermissions: (permissionNames: string[]) => boolean;
+  canAccessResource: (resource: string, action: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,31 +20,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     token: authService.getToken(),
     isAuthenticated: authService.isAuthenticated(),
     isLoading: true,
+    roleDetails: authService.getRoleDetails(),
+    permissions: authService.getPermissions(),
   });
 
   useEffect(() => {
     const initAuth = async () => {
       const token = authService.getToken();
       if (token) {
+        // Check if we already have fresh data in localStorage (from login)
+        const existingPermissions = authService.getPermissions();
+        const existingUser = authService.getUser();
+        const existingRoleDetails = authService.getRoleDetails();
+        
+        // If we have fresh data, use it without fetching
+        if (existingUser && existingPermissions.length > 0) {
+          setState({
+            user: existingUser,
+            token,
+            isAuthenticated: true,
+            isLoading: false,
+            roleDetails: existingRoleDetails,
+            permissions: existingPermissions,
+          });
+          return;
+        }
+        
+        // Otherwise fetch from server
         try {
-          const user = await authService.getCurrentUser();
+          const { user, roleDetails, permissions } = await authService.getCurrentUser();
           authService.saveUser(user);
+          authService.saveRoleDetails(roleDetails);
+          authService.savePermissions(permissions);
           setState({
             user,
             token,
             isAuthenticated: true,
             isLoading: false,
+            roleDetails,
+            permissions,
           });
         } catch (error) {
           console.error('Failed to fetch user profile:', error);
           // Token invalid, clear auth
           authService.saveToken('');
           localStorage.removeItem('user_data');
+          localStorage.removeItem('role_details');
+          localStorage.removeItem('permissions');
           setState({
             user: null,
             token: null,
             isAuthenticated: false,
             isLoading: false,
+            roleDetails: null,
+            permissions: [],
           });
         }
       } else {
@@ -53,22 +86,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUserProfile = useCallback(async () => {
     try {
-      const user = await authService.getCurrentUser();
+      const { user, roleDetails, permissions } = await authService.getCurrentUser();
       authService.saveUser(user);
-      setState((prev) => ({ ...prev, user }));
+      authService.saveRoleDetails(roleDetails);
+      authService.savePermissions(permissions);
+      setState((prev) => ({ ...prev, user, roleDetails, permissions }));
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
     }
   }, []);
 
-  const login = useCallback((token: string, user: User) => {
+  const login = useCallback((token: string, user: User, roleDetails?: RoleDetails, permissions: Permission[] = []) => {
     authService.saveToken(token);
     authService.saveUser(user);
+    authService.saveRoleDetails(roleDetails || null);
+    authService.savePermissions(permissions);
+    
     setState({
       user,
       token,
       isAuthenticated: true,
       isLoading: false,
+      roleDetails: roleDetails || null,
+      permissions,
     });
   }, []);
 
@@ -79,11 +119,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       token: null,
       isAuthenticated: false,
       isLoading: false,
+      roleDetails: null,
+      permissions: [],
     });
   }, []);
 
+  // Permission check methods
+  const hasPermission = useCallback(
+    (permissionName: string): boolean => {
+      return authService.hasPermission(permissionName, state.permissions);
+    },
+    [state.permissions]
+  );
+
+  const hasAnyPermission = useCallback(
+    (permissionNames: string[]): boolean => {
+      return authService.hasAnyPermission(permissionNames, state.permissions);
+    },
+    [state.permissions]
+  );
+
+  const hasAllPermissions = useCallback(
+    (permissionNames: string[]): boolean => {
+      return authService.hasAllPermissions(permissionNames, state.permissions);
+    },
+    [state.permissions]
+  );
+
+  const canAccessResource = useCallback(
+    (resource: string, action: string): boolean => {
+      return authService.canAccessResource(resource, action, state.permissions);
+    },
+    [state.permissions]
+  );
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, fetchUserProfile }}>
+    <AuthContext.Provider
+      value={{
+        ...state,
+        login,
+        logout,
+        fetchUserProfile,
+        hasPermission,
+        hasAnyPermission,
+        hasAllPermissions,
+        canAccessResource,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

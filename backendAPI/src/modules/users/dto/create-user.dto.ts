@@ -1,5 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
-import { UserRole } from '@/common/enums';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, IsMongoId } from 'class-validator';
 
 export class CreateUserDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
@@ -10,9 +9,9 @@ export class CreateUserDto {
   @IsNotEmpty({ message: 'Họ tên không được để trống' })
   fullName: string;
 
-  @IsEnum(UserRole, { message: 'Vai trò không hợp lệ' })
-  @IsNotEmpty({ message: 'Vai trò không được để trống' })
-  role: UserRole;
+  @IsMongoId({ message: 'RoleId không hợp lệ' })
+  @IsNotEmpty({ message: 'RoleId không được để trống' })
+  roleId: string;
 
   @IsOptional()
   @IsString()

@@ -1,10 +1,9 @@
-import { IsOptional, IsEnum, IsString, IsBoolean } from 'class-validator';
-import { UserRole } from '@/common/enums';
+import { IsOptional, IsString, IsBoolean, IsMongoId } from 'class-validator';
 
 export class FilterUserDto {
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsMongoId()
+  roleId?: string;
 
   @IsOptional()
   @IsString()

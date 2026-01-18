@@ -27,4 +27,17 @@ export default () => ({
     autoUnlockBeforeClass: parseInt(process.env.AUTO_UNLOCK_BEFORE_CLASS, 10) || 5,
     notificationBeforeClass: parseInt(process.env.NOTIFICATION_BEFORE_CLASS, 10) || 30,
   },
+
+  // Phase-based Development Configuration
+  app: {
+    // Phase 1: Single Campus (Can Tho) - CURRENT
+    defaultCampusId: process.env.DEFAULT_CAMPUS_ID || '693ad44426d23ee0a8bf08f5',
+    defaultCampusCode: 'CANTHO',
+    
+    // Phase 2+: Multi-Campus Support (Feature Flag)
+    multiCampusEnabled: process.env.MULTI_CAMPUS_ENABLED === 'true' || false,
+    
+    // Supported campus codes (Phase 3: expand this list)
+    supportedCampuses: (process.env.SUPPORTED_CAMPUSES || 'CANTHO').split(','),
+  },
 });
