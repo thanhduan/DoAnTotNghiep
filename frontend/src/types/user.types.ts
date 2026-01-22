@@ -1,4 +1,8 @@
-export type UserRole = 'admin' | 'training_staff' | 'lecturer' | 'student';
+/**
+ * UserRole là string, lấy từ database roles collection
+ * Sử dụng constants từ src/constants/roles.ts
+ */
+export type UserRole = string;
 
 export interface CreateUserDto {
   email: string;

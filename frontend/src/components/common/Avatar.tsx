@@ -1,4 +1,9 @@
 import React from 'react';
+import {
+  Avatar as ShadcnAvatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/ui/avatar';
 
 interface AvatarProps {
   src?: string;
@@ -16,10 +21,10 @@ const Avatar: React.FC<AvatarProps> = ({
   className = '' 
 }) => {
   const sizeClasses = {
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-10 h-10 text-sm',
-    lg: 'w-12 h-12 text-base',
-    xl: 'w-16 h-16 text-lg',
+    sm: 'h-8 w-8',
+    md: 'h-10 w-10',
+    lg: 'h-12 w-12',
+    xl: 'h-16 w-16',
   };
 
   // Get first letter of name for fallback
@@ -30,29 +35,11 @@ const Avatar: React.FC<AvatarProps> = ({
     return alt.charAt(0).toUpperCase();
   };
 
-  const [imageError, setImageError] = React.useState(false);
-
-  // If avatar URL exists and no error, show image
-  if (src && !imageError) {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        onError={() => setImageError(true)}
-        className={`${sizeClasses[size]} rounded-full object-cover ${className}`}
-      />
-    );
-  }
-
-  // Fallback: Show first letter with colored background
   return (
-    <div
-      className={`${sizeClasses[size]} rounded-full bg-primary-100 flex items-center justify-center ${className}`}
-    >
-      <span className="text-primary-600 font-semibold">
-        {getFallbackLetter()}
-      </span>
-    </div>
+    <ShadcnAvatar className={`${sizeClasses[size]} ${className}`}>
+      <AvatarImage src={src} alt={alt} />
+      <AvatarFallback>{getFallbackLetter()}</AvatarFallback>
+    </ShadcnAvatar>
   );
 };
 

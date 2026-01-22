@@ -10,21 +10,21 @@ const HomePage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card title="Phòng học">
           <p className="text-gray-600 mb-4">Quản lý phòng học và thiết bị</p>
-          <Button variant="primary" size="sm">
+          <Button size="sm">
             Xem chi tiết
           </Button>
         </Card>
 
         <Card title="Lịch học">
           <p className="text-gray-600 mb-4">Quản lý lịch giảng dạy</p>
-          <Button variant="primary" size="sm">
+          <Button size="sm">
             Xem chi tiết
           </Button>
         </Card>
 
         <Card title="Mượn - Trả">
           <p className="text-gray-600 mb-4">Lịch sử mượn trả phòng học</p>
-          <Button variant="primary" size="sm">
+          <Button size="sm">
             Xem chi tiết
           </Button>
         </Card>

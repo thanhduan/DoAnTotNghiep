@@ -4,7 +4,7 @@ import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 
 const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, roleDetails } = useAuth();
 
   const stats = [
     { name: 'Tổng số phòng', value: '24', icon: '🏛️', color: 'bg-blue-500' },
@@ -36,7 +36,7 @@ const DashboardPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm">Vai trò:</span>
-            <span className="font-semibold capitalize">{user?.role || 'N/A'}</span>
+            <span className="font-semibold capitalize">{roleDetails?.roleName || 'N/A'}</span>
           </div>
         </div>
       </div>

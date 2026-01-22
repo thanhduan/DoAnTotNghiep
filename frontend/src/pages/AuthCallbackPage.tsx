@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/auth.service';
+import { getDefaultDashboard } from '../constants/roles';
 import Loading from '../components/common/Loading';
 
 const AuthCallbackPage: React.FC = () => {
@@ -39,8 +40,21 @@ const AuthCallbackPage: React.FC = () => {
       try {
         // Parse user from URL parameter
         let user = null;
+        let roleDetails = null;
+        let permissions = [];
+
         if (userParam) {
-          user = JSON.parse(decodeURIComponent(userParam));
+          const parsedData = JSON.parse(decodeURIComponent(userParam));
+          
+          // If backend sends full response, extract parts
+          if (parsedData.user) {
+            user = parsedData.user;
+            roleDetails = parsedData.roleDetails || null;
+            permissions = parsedData.permissions || [];
+          } else {
+            // Legacy format - user data directly
+            user = parsedData;
+          }
         }
 
         if (!user) {
@@ -50,22 +64,23 @@ const AuthCallbackPage: React.FC = () => {
           return;
         }
 
-        // Save token and user, then call login from AuthContext
+        // Save all auth data
         authService.saveToken(token);
         authService.saveUser(user);
+        authService.saveRoleDetails(roleDetails);
+        authService.savePermissions(permissions);
         
-        // Update auth context
-        login(token, user);
+        // Update auth context with permissions
+        login(token, user, roleDetails, permissions);
         
-        console.log('Login successful, redirecting based on role:', user.role);
+        const userRoleName = roleDetails?.roleName || 'unknown';
+        console.log('Login successful, redirecting based on role:', userRoleName);
+        console.log('Permissions loaded:', permissions.length);
         hasProcessed.current = true;
         
-        // Redirect based on role
-        if (user.role === 'admin') {
-          navigate('/dashboard', { replace: true });
-        } else {
-          navigate('/home', { replace: true });
-        }
+        // Redirect based on role - Sử dụng helper function
+        const defaultRoute = getDefaultDashboard(userRoleName);
+        navigate(defaultRoute, { replace: true });
       } catch (err) {
         console.error('Failed to process auth callback:', err);
         hasProcessed.current = true;

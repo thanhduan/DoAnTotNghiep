@@ -9,6 +9,9 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User, UserSchema } from '@/database/schemas/user.schema';
 import { Campus, CampusSchema } from '@/database/schemas/campus.schema';
+import { Role, RoleSchema } from '@/database/schemas/role.schema';
+import { Permission, PermissionSchema } from '@/database/schemas/permission.schema';
+import { RolePermission, RolePermissionSchema } from '@/database/schemas/role-permission.schema';
 
 @Module({
   imports: [
@@ -26,6 +29,9 @@ import { Campus, CampusSchema } from '@/database/schemas/campus.schema';
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Campus.name, schema: CampusSchema },
+      { name: Role.name, schema: RoleSchema },
+      { name: Permission.name, schema: PermissionSchema },
+      { name: RolePermission.name, schema: RolePermissionSchema },
     ]),
   ],
   controllers: [AuthController],

@@ -3,10 +3,12 @@ import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
 import Avatar from '../../components/common/Avatar';
+import PermissionGuard from '../../components/PermissionGuard';
 import { userService } from '../../services/user.service';
 import { campusService } from '../../services/campus.service';
 import { CreateUserDto } from '../../types/user.types';
 import { UserListItem, Campus } from '../../types/models.types';
+import { PERMISSIONS } from '../../utils/permissions';
 
 
 const UserManagementPage: React.FC = () => {
@@ -55,7 +57,7 @@ const UserManagementPage: React.FC = () => {
 
     // Filter by role
     if (roleFilter !== 'all') {
-      filtered = filtered.filter((user) => user.role === roleFilter);
+      filtered = filtered.filter((user) => user.roleId?.roleCode === roleFilter);
     }
 
     // Filter by campus
@@ -140,9 +142,11 @@ const UserManagementPage: React.FC = () => {
             Tạo và quản lý tài khoản người dùng trong hệ thống
           </p>
         </div>
-        <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-          + Thêm người dùng
-        </Button>
+        <PermissionGuard permissions={[PERMISSIONS.USERS_CREATE]}>
+          <Button onClick={() => setShowCreateModal(true)}>
+            + Thêm người dùng
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Filters */}
@@ -267,7 +271,7 @@ const UserManagementPage: React.FC = () => {
                         {user.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getRoleBadge(user.role)}
+                        {getRoleBadge(user.roleId?.roleCode || 'unknown')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {user.employeeId || user.studentId || '-'}
@@ -288,21 +292,23 @@ const UserManagementPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex items-center gap-2">
-                          {user.isActive ? (
-                            <button
-                              onClick={() => handleDeleteUser(user._id, user.fullName)}
-                              className="text-red-600 hover:text-red-800 font-medium"
-                            >
-                              Vô hiệu
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleActivateUser(user._id, user.fullName)}
-                              className="text-green-600 hover:text-green-800 font-medium"
-                            >
-                              Kích hoạt
-                            </button>
-                          )}
+                          <PermissionGuard permissions={[PERMISSIONS.USERS_UPDATE, PERMISSIONS.USERS_DELETE]}>
+                            {user.isActive ? (
+                              <button
+                                onClick={() => handleDeleteUser(user._id, user.fullName)}
+                                className="text-red-600 hover:text-red-800 font-medium"
+                              >
+                                Vô hiệu
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleActivateUser(user._id, user.fullName)}
+                                className="text-green-600 hover:text-green-800 font-medium"
+                              >
+                                Kích hoạt
+                              </button>
+                            )}
+                          </PermissionGuard>
                         </div>
                       </td>
                     </tr>
@@ -535,7 +541,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ onClose, onSuccess })
             <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
               Hủy
             </Button>
-            <Button type="submit" variant="primary" isLoading={loading}>
+            <Button type="submit" isLoading={loading}>
               Tạo người dùng
             </Button>
           </div>

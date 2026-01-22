@@ -1,0 +1,100 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
+import { RolesService } from './roles.service';
+import { CreateRoleDto } from './dto/create-role.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+@Controller('roles')
+@UseGuards(JwtAuthGuard)
+export class RolesController {
+  constructor(private readonly rolesService: RolesService) {}
+
+  /**
+   * POST /api/roles
+   * Create new role with permissions
+   */
+  @Post()
+  async create(@Body() createRoleDto: CreateRoleDto) {
+    const role = await this.rolesService.create(createRoleDto);
+    return {
+      success: true,
+      message: 'Role created successfully',
+      data: role,
+    };
+  }
+
+  /**
+   * GET /api/roles
+   * Get all roles with permissions
+   */
+  @Get()
+  async findAll() {
+    const roles = await this.rolesService.findAll();
+    return {
+      success: true,
+      data: roles,
+    };
+  }
+
+  /**
+   * GET /api/roles/permissions
+   * Get all available permissions for assignment
+   */
+  @Get('permissions')
+  async getAllPermissions() {
+    const permissions = await this.rolesService.getAllPermissions();
+    return {
+      success: true,
+      data: permissions,
+    };
+  }
+
+  /**
+   * GET /api/roles/:id
+   * Get role by ID with permissions
+   */
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const role = await this.rolesService.findOne(id);
+    return {
+      success: true,
+      data: role,
+    };
+  }
+
+  /**
+   * PATCH /api/roles/:id
+   * Update role and permissions
+   */
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
+    const role = await this.rolesService.update(id, updateRoleDto);
+    return {
+      success: true,
+      message: 'Role updated successfully',
+      data: role,
+    };
+  }
+
+  /**
+   * DELETE /api/roles/:id
+   * Delete role
+   */
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    await this.rolesService.remove(id);
+    return {
+      success: true,
+      message: 'Role deleted successfully',
+    };
+  }
+}

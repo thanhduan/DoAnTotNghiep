@@ -10,6 +10,7 @@ import { User } from '@/database/schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FilterUserDto } from './dto/filter-user.dto';
+import { AppConfig } from '@/config/app.config';
 
 @Injectable()
 export class UsersService {
@@ -21,7 +22,7 @@ export class UsersService {
   /**
    * Create new user (admin creates user before they login)
    */
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto, currentUser?: any): Promise<User> {
     const { email, campusId } = createUserDto;
 
     // Check if email already exists
@@ -33,11 +34,17 @@ export class UsersService {
       throw new ConflictException('Email đã tồn tại trong hệ thống');
     }
 
-    // Validate campusId if provided
-    if (campusId) {
-      if (!Types.ObjectId.isValid(campusId)) {
-        throw new BadRequestException('Campus ID không hợp lệ');
-      }
+    // Auto-inject campusId if not provided (Phase 1: Use default campus)
+    let finalCampusId = campusId;
+    if (!finalCampusId) {
+      // If Super Admin creates user, use default campus (Phase 1)
+      // If Campus Admin creates user, use their campus
+      finalCampusId = currentUser?.campusId || AppConfig.DEFAULT_CAMPUS_ID;
+    }
+
+    // Validate campusId
+    if (!Types.ObjectId.isValid(finalCampusId)) {
+      throw new BadRequestException('Campus ID không hợp lệ');
     }
 
     // Create user with empty googleId (will be filled when they login)
@@ -45,20 +52,25 @@ export class UsersService {
       ...createUserDto,
       googleId: null, // Empty googleId - will be set on first login
       isActive: true,
-      campusId: campusId ? new Types.ObjectId(campusId) : undefined,
+      campusId: new Types.ObjectId(finalCampusId),
     });
 
     return newUser.save();
   }
 
   /**
-   * Get all users with optional filters
+   * Get all users with optional filters (campus-scoped)
    */
   async findAll(filterDto?: FilterUserDto): Promise<User[]> {
     const query: any = {};
 
-    if (filterDto?.role) {
-      query.role = filterDto.role;
+    // Apply campus filter (injected by CampusScopeGuard)
+    if (filterDto?.campusId) {
+      query.campusId = new Types.ObjectId(filterDto.campusId);
+    }
+
+    if (filterDto?.roleId) {
+      query.roleId = new Types.ObjectId(filterDto.roleId);
     }
 
     if (filterDto?.campusId) {
@@ -85,6 +97,7 @@ export class UsersService {
       .find(query)
       .select('-faceData -fingerprintData -googleId')
       .populate('campusId', 'campusCode campusName address')
+      .populate('roleId', 'roleName roleCode roleLevel')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -101,6 +114,7 @@ export class UsersService {
       .findById(id)
       .select('-faceData -fingerprintData -googleId')
       .populate('campusId', 'campusCode campusName address')
+      .populate('roleId', 'roleName roleCode roleLevel')
       .exec();
 
     if (!user) {
@@ -145,8 +159,7 @@ export class UsersService {
     const updatedUser = await this.userModel
       .findByIdAndUpdate(id, updateUserDto, { new: true })
       .select('-faceData -fingerprintData -googleId')
-      .populate('campusId', 'campusCode campusName address')
-      .exec();
+      .populate('campusId', 'campusCode campusName address')      .populate('roleId', 'roleName roleCode roleLevel')      .exec();
 
     if (!updatedUser) {
       throw new NotFoundException(`Không tìm thấy user với ID: ${id}`);
@@ -184,6 +197,7 @@ export class UsersService {
       .findByIdAndUpdate(id, { isActive: true }, { new: true })
       .select('-faceData -fingerprintData -googleId')
       .populate('campusId', 'campusCode campusName address')
+      .populate('roleId', 'roleName roleCode roleLevel')
       .exec();
 
     if (!user) {
@@ -196,12 +210,15 @@ export class UsersService {
   /**
    * Get statistics
    */
-  async getStatistics() {
-    const total = await this.userModel.countDocuments();
-    const active = await this.userModel.countDocuments({ isActive: true });
-    const inactive = await this.userModel.countDocuments({ isActive: false });
+  async getStatistics(campusFilter: any = {}) {
+    const filter = { ...campusFilter };
+    
+    const total = await this.userModel.countDocuments(filter);
+    const active = await this.userModel.countDocuments({ ...filter, isActive: true });
+    const inactive = await this.userModel.countDocuments({ ...filter, isActive: false });
 
     const byRole = await this.userModel.aggregate([
+      { $match: filter },
       {
         $group: {
           _id: '$role',

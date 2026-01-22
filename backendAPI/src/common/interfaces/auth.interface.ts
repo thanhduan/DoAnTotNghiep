@@ -1,7 +1,10 @@
 export interface JwtPayload {
-  sub: string;
+  sub: string; // userId
   email: string;
-  role: string;
+  roleCode: string; // SUPER_ADMIN, CAMPUS_ADMIN, etc.
+  roleLevel: number; // Hierarchy level
+  campusId: string | null; // null for Super Admin in Phase 1
+  permissions: string[]; // Array of permission strings
 }
 
 export interface GoogleProfile {

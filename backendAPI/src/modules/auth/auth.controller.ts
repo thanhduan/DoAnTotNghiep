@@ -60,10 +60,22 @@ export class AuthController {
       // Get frontend URL from config
       const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
-      // Redirect to frontend with token
-      const redirectUrl = `${frontendUrl}/auth/callback?token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(result.user))}`;
+      // Prepare response data with permissions
+      const responseData = {
+        user: result.user,
+        roleDetails: result.roleDetails,
+        permissions: result.permissions,
+      };
+
+      // Redirect to frontend with token and full response data
+      const redirectUrl = `${frontendUrl}/auth/callback?token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(responseData))}`;
 
       console.log('🔄 Redirecting to:', redirectUrl);
+      console.log('📦 Response includes:', {
+        user: result.user.email,
+        role: result.roleDetails?.roleName || 'N/A',
+        permissionsCount: result.permissions?.length || 0,
+      });
       return res.redirect(redirectUrl);
     } catch (error) {
       console.error('❌ Auth error:', error.message);
@@ -111,7 +123,7 @@ export class AuthController {
         id: user._id.toString(),
         email: user.email,
         fullName: user.fullName,
-        role: user.role,
+        roleId: user.roleId,
       },
     };
   }

@@ -1,6 +1,31 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  LayoutDashboard,
+  Building,
+  Calendar,
+  BookOpen,
+  Users,
+  Shield,
+  Settings,
+  Menu,
+  Bell,
+  LogOut,
+  X,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
@@ -8,128 +33,145 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const navigation = [
-    { name: 'Dashboard', path: '/dashboard', icon: '📊' },
-    { name: 'Phòng học', path: '/rooms', icon: '🏛️' },
-    { name: 'Tủ khóa', path: '/lockers', icon: '🗄️' },
-    { name: 'Lịch học', path: '/schedules', icon: '📅' },
-    { name: 'Đặt phòng', path: '/bookings', icon: '📝' },
-    { name: 'Người dùng', path: '/users', icon: '👥' },
-    { name: 'Cài đặt', path: '/settings', icon: '⚙️' },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Phòng học', path: '/rooms', icon: Building },
+    { name: 'Tủ khóa', path: '/lockers', icon: Building },
+    { name: 'Lịch học', path: '/schedules', icon: Calendar },
+    { name: 'Đặt phòng', path: '/bookings', icon: BookOpen },
+    { name: 'Người dùng', path: '/users', icon: Users },
+    { name: 'Quản lý Roles', path: '/roles', icon: Shield },
+    { name: 'Cài đặt', path: '/settings', icon: Settings },
   ];
 
   const isActivePath = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r shadow-sm transform transition-transform duration-300 ease-in-out",
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
+        <div className="h-16 flex items-center justify-between px-6 border-b">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <BookOpen className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-gray-900">Classroom</span>
+            <span className="text-lg font-bold">Classroom IoT</span>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-500 hover:text-gray-700"
+            className="lg:hidden"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              to={item.path}
-              
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActivePath(item.path)
-                  ? 'bg-primary-50 text-primary-700 font-medium'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span>{item.name}</span>
-            </Link>
-          ))}
+        <nav className="flex-1 px-4 py-6 space-y-1">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const isActive = isActivePath(item.path);
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* User Profile */}
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t p-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-              <span className="text-primary-700 font-semibold text-sm">
+            <Avatar>
+              <AvatarFallback>
                 {user?.fullName?.charAt(0) || 'U'}
-              </span>
-            </div>
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium truncate">
                 {user?.fullName || 'User'}
               </p>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {user?.email || ''}
               </p>
             </div>
           </div>
-          <button
+          <Button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            variant="destructive"
+            className="w-full"
+            size="sm"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <LogOut className="w-4 h-4 mr-2" />
             Đăng xuất
-          </button>
+          </Button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:pl-64' : ''}`}>
+      <div className={cn("transition-all duration-300", sidebarOpen ? 'lg:pl-64' : '')}>
         {/* Top Navbar */}
-        <header className="bg-white shadow-sm sticky top-0 z-40">
+        <header className="bg-card border-b sticky top-0 z-40">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               {/* Menu Toggle */}
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="text-gray-500 hover:text-gray-700"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+                <Menu className="h-5 w-5" />
+              </Button>
 
               {/* Right Section */}
               <div className="flex items-center gap-4">
                 {/* Campus Badge */}
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-primary-50 rounded-full">
-                  <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span className="text-xs font-medium text-primary-700">
-                    {user?.campusId?.campusCode || 'N/A'}
-                  </span>
-                </div>
+                <Badge variant="secondary" className="hidden sm:flex">
+                  <Building className="w-3 h-3 mr-1" />
+                  {user?.campusId?.campusCode || 'Can Tho'}
+                </Badge>
 
                 {/* Notifications */}
-                <button className="relative p-2 text-gray-400 hover:text-gray-500">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500"></span>
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Bell className="h-5 w-5" />
+                      <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-destructive" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80">
+                    <DropdownMenuLabel>Thông báo</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium">Booking được phê duyệt</p>
+                        <p className="text-xs text-muted-foreground">5 phút trước</p>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium">Yêu cầu chuyển key mới</p>
+                        <p className="text-xs text-muted-foreground">10 phút trước</p>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
@@ -144,9 +186,9 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
-        ></div>
+        />
       )}
     </div>
   );

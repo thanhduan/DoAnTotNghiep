@@ -1,4 +1,8 @@
-export type UserRole = 'admin' | 'security' | 'lecturer' | 'education_officer';
+/**
+ * UserRole được lấy động từ database
+ * Không nên hardcode, dùng roleDetails.roleName thay vì role string
+ */
+export type UserRole = string;
 
 export interface Campus {
   _id: string;
@@ -8,12 +12,28 @@ export interface Campus {
   isActive: boolean;
 }
 
+export interface Permission {
+  id: string;
+  permissionName: string;
+  resource: string;
+  action: string;
+  description: string;
+}
+
+export interface RoleDetails {
+  id: string;
+  roleName: string;
+  roleCode: string;
+  roleLevel: number;
+  description: string;
+}
+
 export interface User {
   _id: string;
   email: string;
   fullName: string;
   avatar?: string;
-  role: UserRole;
+  roleId?: string;
   employeeId?: string;
   studentId?: string;
   department?: string;
@@ -28,9 +48,14 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  roleDetails: RoleDetails | null;
+  permissions: Permission[];
 }
 
 export interface LoginResponse {
+  success: boolean;
+  accessToken: string;
   user: User;
-  token: string;
+  roleDetails?: RoleDetails;
+  permissions?: Permission[];
 }
