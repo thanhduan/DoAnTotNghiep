@@ -6,16 +6,6 @@
   "installCommand": "npm install",
   "framework": "create-react-app",
   "regions": ["sin1"],
-  "env": {
-    "REACT_APP_API_URL": "@react_app_api_url",
-    "REACT_APP_WS_URL": "@react_app_ws_url"
-  },
-  "build": {
-    "env": {
-      "REACT_APP_API_URL": "@react_app_api_url",
-      "REACT_APP_WS_URL": "@react_app_ws_url"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
