@@ -29,7 +29,7 @@ const UserManagementPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [campusFilter] = useState<string>('all');
-  const [campuses] = useState<Campus[]>([]);
+  // const [campuses] = useState<Campus[]>([]); // Not used
   const [roles, setRoles] = useState<Role[]>([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
