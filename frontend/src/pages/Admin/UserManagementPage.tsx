@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useToast } from '../../hooks/use-toast';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { Loader2, Plus, Search, UserPlus } from 'lucide-react';
+import { Loader2, Search, UserPlus } from 'lucide-react';
 
 
 const UserManagementPage: React.FC = () => {
@@ -28,8 +28,8 @@ const UserManagementPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [campusFilter, setCampusFilter] = useState<string>('all');
-  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [campusFilter] = useState<string>('all');
+  const [campuses] = useState<Campus[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
@@ -82,6 +82,7 @@ const UserManagementPage: React.FC = () => {
     fetchUsers();
     fetchCampuses();
     fetchRoles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter users

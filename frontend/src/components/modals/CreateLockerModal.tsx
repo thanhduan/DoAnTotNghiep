@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Button from '../common/Button';
 import { LockerPayload, LockerStatus, LockerEntity } from '../../types/locker.type';
 import { lockerService } from '../../services/locker.service';

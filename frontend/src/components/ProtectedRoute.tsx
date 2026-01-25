@@ -22,7 +22,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { 
     isAuthenticated, 
     isLoading, 
-    user,
     roleDetails,
     hasAnyPermission, 
     hasAllPermissions, 
