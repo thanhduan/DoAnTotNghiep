@@ -7,7 +7,7 @@ export type UserRole = string;
 export interface CreateUserDto {
   email: string;
   fullName: string;
-  role: UserRole;
+  roleId: string;
   employeeId?: string;
   studentId?: string;
   department?: string;
@@ -18,7 +18,7 @@ export interface CreateUserDto {
 export interface UpdateUserDto {
   email?: string;
   fullName?: string;
-  role?: UserRole;
+  roleId?: string;
   employeeId?: string;
   studentId?: string;
   department?: string;
@@ -28,7 +28,7 @@ export interface UpdateUserDto {
 }
 
 export interface FilterUserDto {
-  role?: UserRole;
+  roleId?: string;
   campusId?: string;
   isActive?: boolean;
   search?: string;

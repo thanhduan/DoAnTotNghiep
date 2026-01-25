@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Role } from '@/database/schemas/role.schema';
+import { Campus } from '@/database/schemas/campus.schema';
 import { Permission } from '@/database/schemas/permission.schema';
 import { RolePermission } from '@/database/schemas/role-permission.schema';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -16,6 +17,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 export class RolesService {
   constructor(
     @InjectModel(Role.name) private roleModel: Model<Role>,
+    @InjectModel(Campus.name) private campusModel: Model<Campus>,
     @InjectModel(Permission.name) private permissionModel: Model<Permission>,
     @InjectModel(RolePermission.name)
     private rolePermissionModel: Model<RolePermission>,
@@ -25,7 +27,20 @@ export class RolesService {
    * Create new role with permissions
    */
   async create(createRoleDto: CreateRoleDto): Promise<any> {
-    const { roleName, description, permissionIds, isActive = true } = createRoleDto;
+    const {
+      roleName,
+      roleCode,
+      roleLevel,
+      scope = 'GLOBAL',
+      campusId,
+      description,
+      permissionIds,
+      isActive = true,
+      canAccessWeb = false,
+      canManageRoles = false,
+    } = createRoleDto;
+
+    const normalizedRoleCode = roleCode.trim().toUpperCase();
 
     // Check if role name already exists
     const existingRole = await this.roleModel
@@ -34,6 +49,27 @@ export class RolesService {
 
     if (existingRole) {
       throw new ConflictException('Role name already exists');
+    }
+
+    const existingRoleCode = await this.roleModel
+      .findOne({ roleCode: { $regex: new RegExp(`^${normalizedRoleCode}$`, 'i') } })
+      .exec();
+
+    if (existingRoleCode) {
+      throw new ConflictException('Role code already exists');
+    }
+
+    if (scope === 'CAMPUS') {
+      if (!campusId) {
+        throw new BadRequestException('Campus ID là bắt buộc khi scope = CAMPUS');
+      }
+      if (!Types.ObjectId.isValid(campusId)) {
+        throw new BadRequestException('Campus ID không hợp lệ');
+      }
+      const campusExists = await this.campusModel.exists({ _id: campusId, isActive: true });
+      if (!campusExists) {
+        throw new BadRequestException('Campus không tồn tại hoặc đã bị vô hiệu');
+      }
     }
 
     // Validate permission IDs if provided
@@ -50,8 +86,14 @@ export class RolesService {
     // Create role
     const newRole = new this.roleModel({
       roleName,
+      roleCode: normalizedRoleCode,
+      roleLevel,
+      scope,
+      campusId: scope === 'CAMPUS' ? new Types.ObjectId(campusId) : null,
       description,
       isActive,
+      canAccessWeb,
+      canManageRoles,
     });
 
     const savedRole = await newRole.save();
@@ -95,8 +137,14 @@ export class RolesService {
         return {
           id: role._id.toString(),
           roleName: role.roleName,
+          roleCode: role.roleCode,
+          roleLevel: role.roleLevel,
+          scope: (role as any).scope,
+          campusId: (role as any).campusId,
           description: role.description,
           isActive: role.isActive,
+          canAccessWeb: role.canAccessWeb,
+          canManageRoles: (role as any).canManageRoles,
           permissionCount: permissions.length,
           permissions,
           createdAt: role.createdAt,
@@ -144,8 +192,14 @@ export class RolesService {
     return {
       id: role._id.toString(),
       roleName: role.roleName,
+      roleCode: role.roleCode,
+      roleLevel: role.roleLevel,
+      scope: (role as any).scope,
+      campusId: (role as any).campusId,
       description: role.description,
       isActive: role.isActive,
+      canAccessWeb: role.canAccessWeb,
+      canManageRoles: (role as any).canManageRoles,
       permissions,
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
@@ -166,7 +220,18 @@ export class RolesService {
       throw new NotFoundException('Role not found');
     }
 
-    const { roleName, description, permissionIds, isActive } = updateRoleDto;
+    const {
+      roleName,
+      roleCode,
+      roleLevel,
+      scope,
+      campusId,
+      description,
+      permissionIds,
+      isActive,
+      canAccessWeb,
+      canManageRoles,
+    } = updateRoleDto;
 
     // Check if new role name already exists (excluding current role)
     if (roleName && roleName !== role.roleName) {
@@ -179,6 +244,34 @@ export class RolesService {
 
       if (existingRole) {
         throw new ConflictException('Role name already exists');
+      }
+    }
+
+    if (roleCode && roleCode.trim().toUpperCase() !== role.roleCode) {
+      const normalizedRoleCode = roleCode.trim().toUpperCase();
+      const existingRoleCode = await this.roleModel
+        .findOne({
+          roleCode: { $regex: new RegExp(`^${normalizedRoleCode}$`, 'i') },
+          _id: { $ne: id },
+        })
+        .exec();
+
+      if (existingRoleCode) {
+        throw new ConflictException('Role code already exists');
+      }
+    }
+
+    if (scope === 'CAMPUS') {
+      const nextCampusId = campusId || (role as any).campusId?.toString();
+      if (!nextCampusId) {
+        throw new BadRequestException('Campus ID là bắt buộc khi scope = CAMPUS');
+      }
+      if (!Types.ObjectId.isValid(nextCampusId)) {
+        throw new BadRequestException('Campus ID không hợp lệ');
+      }
+      const campusExists = await this.campusModel.exists({ _id: nextCampusId, isActive: true });
+      if (!campusExists) {
+        throw new BadRequestException('Campus không tồn tại hoặc đã bị vô hiệu');
       }
     }
 
@@ -195,8 +288,16 @@ export class RolesService {
 
     // Update role
     if (roleName) role.roleName = roleName;
+    if (roleCode) role.roleCode = roleCode.trim().toUpperCase();
+    if (roleLevel !== undefined) role.roleLevel = roleLevel;
+    if (scope !== undefined) role.set('scope', scope);
+    if (campusId !== undefined) {
+      role.set('campusId', scope === 'CAMPUS' ? new Types.ObjectId(campusId) : null);
+    }
     if (description !== undefined) role.description = description;
     if (isActive !== undefined) role.isActive = isActive;
+    if (canAccessWeb !== undefined) role.canAccessWeb = canAccessWeb;
+    if (canManageRoles !== undefined) role.set('canManageRoles', canManageRoles);
 
     await role.save();
 

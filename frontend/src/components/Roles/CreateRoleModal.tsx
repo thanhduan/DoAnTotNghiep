@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Role, Permission } from '../../types/role.types';
 import { roleService } from '../../services/role.service';
+import { campusService } from '../../services/campus.service';
+import { Campus } from '../../types/models.types';
 
 interface CreateRoleModalProps {
   isOpen: boolean;
@@ -17,11 +19,18 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     roleName: '',
+    roleCode: '',
+    roleLevel: 3,
+    scope: 'CAMPUS' as 'GLOBAL' | 'CAMPUS' | 'SELF',
+    campusId: '',
     description: '',
     isActive: true,
+    canManageRoles: false,
+    canAccessWeb: false, // Default: mobile only
   });
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,12 +39,19 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadPermissions();
+      loadCampuses();
       
       if (editRole) {
         setFormData({
           roleName: editRole.roleName,
+          roleCode: editRole.roleCode || '',
+          roleLevel: editRole.roleLevel ?? 3,
+          scope: editRole.scope || 'GLOBAL',
+          campusId: editRole.campusId ? String(editRole.campusId) : '',
           description: editRole.description || '',
           isActive: editRole.isActive,
+          canManageRoles: editRole.canManageRoles || false,
+          canAccessWeb: editRole.canAccessWeb || false,
         });
         setSelectedPermissions(editRole.permissions.map(p => p.id));
       } else {
@@ -54,11 +70,26 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
     }
   };
 
+  const loadCampuses = async () => {
+    try {
+      const data = await campusService.getAll();
+      setCampuses(data);
+    } catch (err) {
+      console.error('Failed to load campuses:', err);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       roleName: '',
+      roleCode: '',
+      roleLevel: 3,
+      scope: 'CAMPUS',
+      campusId: '',
       description: '',
       isActive: true,
+      canManageRoles: false,
+      canAccessWeb: false,
     });
     setSelectedPermissions([]);
     setError('');
@@ -66,6 +97,11 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -118,6 +154,26 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
       return;
     }
 
+    if (!formData.roleCode.trim()) {
+      setError('Mã role không được để trống');
+      return;
+    }
+
+    if (!/^[A-Z_]+$/.test(formData.roleCode.trim().toUpperCase())) {
+      setError('Mã role chỉ được chứa chữ in hoa và dấu gạch dưới (VD: TRAINING_OFFICER)');
+      return;
+    }
+
+    if (formData.roleLevel === undefined || formData.roleLevel === null) {
+      setError('Cấp độ role không được để trống');
+      return;
+    }
+
+    if (formData.scope === 'CAMPUS' && !formData.campusId) {
+      setError('Vui lòng chọn campus cho role có scope CAMPUS');
+      return;
+    }
+
     if (selectedPermissions.length === 0) {
       setError('Vui lòng chọn ít nhất một quyền');
       return;
@@ -128,11 +184,18 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
     try {
       const data = {
         ...formData,
+        roleCode: formData.roleCode.trim().toUpperCase(),
+        roleLevel: Number(formData.roleLevel),
+        campusId: formData.scope === 'CAMPUS' ? formData.campusId : null,
         permissionIds: selectedPermissions,
       };
 
       if (editRole) {
-        await roleService.updateRole(editRole.id, data);
+        const roleId = editRole.id || editRole._id;
+        if (!roleId) {
+          throw new Error('Role ID không hợp lệ');
+        }
+        await roleService.updateRole(roleId, data);
       } else {
         await roleService.createRole(data);
       }
@@ -197,6 +260,77 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mã Role <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="roleCode"
+                    value={formData.roleCode}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="VD: TRAINING_OFFICER"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cấp độ <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="roleLevel"
+                      min={0}
+                      max={4}
+                      value={formData.roleLevel}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Scope <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="scope"
+                      value={formData.scope}
+                      onChange={handleSelectChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="GLOBAL">GLOBAL</option>
+                      <option value="CAMPUS">CAMPUS</option>
+                      <option value="SELF">SELF</option>
+                    </select>
+                  </div>
+                </div>
+
+                {formData.scope === 'CAMPUS' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Campus <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="campusId"
+                      value={formData.campusId}
+                      onChange={handleSelectChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Chọn campus</option>
+                      {campuses.map((campus) => (
+                        <option key={campus._id} value={campus._id}>
+                          {campus.campusName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Mô tả
                   </label>
                   <textarea
@@ -219,6 +353,35 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                   />
                   <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
                     Kích hoạt role
+                  </label>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="canManageRoles"
+                    checked={formData.canManageRoles}
+                    onChange={(e) => setFormData(prev => ({ ...prev, canManageRoles: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="canManageRoles" className="ml-2 text-sm text-gray-700">
+                    Cho phép quản lý roles
+                  </label>
+                </div>
+
+                <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="canAccessWeb"
+                    checked={formData.canAccessWeb}
+                    onChange={(e) => setFormData(prev => ({ ...prev, canAccessWeb: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="canAccessWeb" className="ml-2 text-sm font-medium text-blue-900">
+                    🌐 Cho phép truy cập Web
+                    <span className="block text-xs text-blue-700 mt-0.5">
+                      Nếu không chọn, role này chỉ sử dụng được trên Mobile App
+                    </span>
                   </label>
                 </div>
               </div>

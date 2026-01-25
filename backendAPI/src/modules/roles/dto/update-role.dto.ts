@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean, IsNumber, IsEnum, IsMongoId } from 'class-validator';
 
 export class UpdateRoleDto {
   @IsString()
@@ -9,6 +9,22 @@ export class UpdateRoleDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  roleCode?: string;
+
+  @IsNumber()
+  @IsOptional()
+  roleLevel?: number;
+
+  @IsEnum(['GLOBAL', 'CAMPUS', 'SELF'])
+  @IsOptional()
+  scope?: string;
+
+  @IsMongoId({ message: 'Campus ID không hợp lệ' })
+  @IsOptional()
+  campusId?: string;
+
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
@@ -17,4 +33,12 @@ export class UpdateRoleDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  canManageRoles?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  canAccessWeb?: boolean;
 }

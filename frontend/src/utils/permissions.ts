@@ -73,6 +73,12 @@ export const PERMISSIONS = {
   BOOKINGS_REJECT: 'bookings.reject',
   BOOKINGS_DELETE: 'bookings.delete',
   
+  // Lockers
+  LOCKERS_READ: 'lockers.read',
+  LOCKERS_UPDATE: 'lockers.update',
+  LOCKERS_UNLOCK: 'lockers.unlock',
+  LOCKERS_MANAGE: 'lockers.manage',
+  
   // Attendance
   ATTENDANCE_READ: 'attendance.read',
   ATTENDANCE_MARK: 'attendance.mark',
@@ -85,6 +91,9 @@ export const PERMISSIONS = {
   // Reports
   REPORTS_VIEW: 'reports.view',
   REPORTS_EXPORT: 'reports.export',
+
+  // System logs
+  LOGS_READ: 'logs.read',
 } as const;
 
 /**
@@ -124,6 +133,10 @@ export const getPermissionDisplayName = (permissionName: string): string => {
     'bookings.approve': 'Duyệt đặt phòng',
     'bookings.reject': 'Từ chối đặt phòng',
     'bookings.delete': 'Xóa đặt phòng',
+    'lockers.read': 'Xem tủ khóa',
+    'lockers.update': 'Cập nhật tủ khóa',
+    'lockers.unlock': 'Mở khóa tủ',
+    'lockers.manage': 'Quản lý tủ khóa',
     'attendance.read': 'Xem điểm danh',
     'attendance.mark': 'Điểm danh',
     'attendance.update': 'Cập nhật điểm danh',
@@ -131,6 +144,7 @@ export const getPermissionDisplayName = (permissionName: string): string => {
     'settings.update': 'Cập nhật cài đặt',
     'reports.view': 'Xem báo cáo',
     'reports.export': 'Xuất báo cáo',
+    'logs.read': 'Xem audit log hệ thống',
   };
   return names[permissionName] || permissionName;
 };

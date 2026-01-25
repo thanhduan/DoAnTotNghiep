@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User } from '@/database/schemas/user.schema';
+import { Role } from '@/database/schemas/role.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FilterUserDto } from './dto/filter-user.dto';
@@ -17,13 +18,15 @@ export class UsersService {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<User>,
+    @InjectModel(Role.name)
+    private roleModel: Model<Role>,
   ) {}
 
   /**
    * Create new user (admin creates user before they login)
    */
   async create(createUserDto: CreateUserDto, currentUser?: any): Promise<User> {
-    const { email, campusId } = createUserDto;
+    const { email, campusId, roleId } = createUserDto;
 
     // Check if email already exists
     const existingUser = await this.userModel
@@ -42,6 +45,16 @@ export class UsersService {
       finalCampusId = currentUser?.campusId || AppConfig.DEFAULT_CAMPUS_ID;
     }
 
+    // Validate roleId
+    if (!Types.ObjectId.isValid(roleId)) {
+      throw new BadRequestException('Role ID không hợp lệ');
+    }
+
+    const roleExists = await this.roleModel.exists({ _id: roleId });
+    if (!roleExists) {
+      throw new BadRequestException('Role không tồn tại');
+    }
+
     // Validate campusId
     if (!Types.ObjectId.isValid(finalCampusId)) {
       throw new BadRequestException('Campus ID không hợp lệ');
@@ -52,6 +65,7 @@ export class UsersService {
       ...createUserDto,
       googleId: null, // Empty googleId - will be set on first login
       isActive: true,
+      roleId: new Types.ObjectId(roleId),
       campusId: new Types.ObjectId(finalCampusId),
     });
 
@@ -146,6 +160,18 @@ export class UsersService {
       }
     }
 
+    // Validate roleId if provided
+    if (updateUserDto.roleId) {
+      if (!Types.ObjectId.isValid(updateUserDto.roleId)) {
+        throw new BadRequestException('Role ID không hợp lệ');
+      }
+      const roleExists = await this.roleModel.exists({ _id: updateUserDto.roleId });
+      if (!roleExists) {
+        throw new BadRequestException('Role không tồn tại');
+      }
+      (updateUserDto as any).roleId = new Types.ObjectId(updateUserDto.roleId);
+    }
+
     // Validate campusId if provided
     if (updateUserDto.campusId) {
       if (!Types.ObjectId.isValid(updateUserDto.campusId)) {
@@ -205,6 +231,35 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  /**
+   * Ban user (set inactive)
+   */
+  async ban(id: string): Promise<User> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { isActive: false }, { new: true })
+      .select('-faceData -fingerprintData -googleId')
+      .populate('campusId', 'campusCode campusName address')
+      .populate('roleId', 'roleName roleCode roleLevel')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException(`Không tìm thấy user với ID: ${id}`);
+    }
+
+    return user;
+  }
+
+  /**
+   * Unban user (set active)
+   */
+  async unban(id: string): Promise<User> {
+    return this.activate(id);
   }
 
   /**

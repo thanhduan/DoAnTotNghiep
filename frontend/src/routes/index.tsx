@@ -12,6 +12,7 @@ import DashboardPage from '../pages/Admin/DashboardPage';
 import UserManagementPage from '../pages/Admin/UserManagementPage';
 import LockerManagementPage from '../pages/Admin/LockerManagementPage';
 import RoleManagementPage from '../pages/Admin/RoleManagementPage';
+import AuditLogPage from '../pages/Admin/AuditLogPage';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -50,7 +51,9 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/lockers"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.LOCKERS_READ]}
+              >
                 <AdminLayout>
                   <LockerManagementPage />
                 </AdminLayout>
@@ -66,6 +69,19 @@ const AppRoutes: React.FC = () => {
               >
                 <AdminLayout>
                   <RoleManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/audit-logs"
+            element={
+              <ProtectedRoute 
+                requiredPermissions={[PERMISSIONS.LOGS_READ]}
+              >
+                <AdminLayout>
+                  <AuditLogPage />
                 </AdminLayout>
               </ProtectedRoute>
             }

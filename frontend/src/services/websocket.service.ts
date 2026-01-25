@@ -4,9 +4,16 @@ import { WS_BASE_URL } from '../constants';
 class WebSocketService {
   private socket: Socket | null = null;
 
+  private getNamespaceUrl(): string {
+    if (WS_BASE_URL.endsWith('/events')) {
+      return WS_BASE_URL;
+    }
+    return `${WS_BASE_URL.replace(/\/$/, '')}/events`;
+  }
+
   connect(): Socket {
     if (!this.socket) {
-      this.socket = io(WS_BASE_URL, {
+      this.socket = io(this.getNamespaceUrl(), {
         withCredentials: true,
         autoConnect: true,
       });
@@ -64,6 +71,11 @@ class WebSocketService {
 
   onBroadcastNotification(callback: (data: any) => void): void {
     this.socket?.on('notification:broadcast', callback);
+  }
+
+  // Audit log events
+  onAuditLogUpdate(callback: (data: { entry: string; timestamp: string }) => void): void {
+    this.socket?.on('audit:log', callback);
   }
 
   // Custom event listener

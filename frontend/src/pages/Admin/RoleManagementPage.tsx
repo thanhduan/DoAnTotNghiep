@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Role } from '../../types/role.types';
 import { roleService } from '../../services/role.service';
 import CreateRoleModal from '../../components/Roles/CreateRoleModal';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import PermissionGuard from '../../components/PermissionGuard';
 import { PERMISSIONS } from '../../utils/permissions';
 
@@ -11,7 +12,10 @@ const RoleManagementPage: React.FC = () => {
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmDescription, setConfirmDescription] = useState('');
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -40,14 +44,20 @@ const RoleManagementPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteRole = async (id: string) => {
-    try {
-      await roleService.deleteRole(id);
-      setRoles(roles.filter((r) => r.id !== id));
-      setDeleteConfirm(null);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể xóa role');
-    }
+  const handleDeleteRole = (id: string) => {
+    setConfirmTitle('Xác nhận xóa role');
+    setConfirmDescription('Bạn có chắc chắn muốn xóa role này? Hành động này không thể hoàn tác.');
+    setConfirmAction(() => async () => {
+      try {
+        await roleService.deleteRole(id);
+        setRoles(roles.filter((r) => (r.id || r._id) !== id));
+      } catch (err: any) {
+        alert(err.response?.data?.message || 'Không thể xóa role');
+      } finally {
+        setConfirmOpen(false);
+      }
+    });
+    setConfirmOpen(true);
   };
 
   const toggleRoleExpansion = (roleId: string) => {
@@ -105,9 +115,11 @@ const RoleManagementPage: React.FC = () => {
 
       {/* Roles Grid */}
       <div className="grid grid-cols-1 gap-6">
-        {roles.map((role) => (
+        {roles.map((role) => {
+          const roleId = String(role.id || role._id);
+          return (
           <div
-            key={role.id}
+            key={roleId}
             className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition"
           >
             {/* Role Header */}
@@ -130,12 +142,12 @@ const RoleManagementPage: React.FC = () => {
 
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => toggleRoleExpansion(role.id)}
+                    onClick={() => toggleRoleExpansion(roleId)}
                     className="p-2 text-gray-600 hover:bg-gray-100 rounded transition"
                     title="Xem chi tiết permissions"
                   >
                     <svg
-                      className={`w-5 h-5 transition-transform ${expandedRoles.has(role.id) ? 'rotate-180' : ''}`}
+                      className={`w-5 h-5 transition-transform ${expandedRoles.has(roleId) ? 'rotate-180' : ''}`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -156,7 +168,7 @@ const RoleManagementPage: React.FC = () => {
                   </PermissionGuard>
                   <PermissionGuard permissions={[PERMISSIONS.ROLES_DELETE]}>
                     <button
-                      onClick={() => setDeleteConfirm(role.id)}
+                      onClick={() => handleDeleteRole(roleId)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded transition"
                       title="Xóa"
                     >
@@ -168,32 +180,10 @@ const RoleManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Delete Confirmation */}
-              {deleteConfirm === role.id && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
-                  <p className="text-sm text-red-800 mb-2">
-                    Bạn có chắc chắn muốn xóa role này? Hành động này không thể hoàn tác.
-                  </p>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleDeleteRole(role.id)}
-                      className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition"
-                    >
-                      Xác nhận xóa
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 transition"
-                    >
-                      Hủy
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Expanded Permissions */}
-            {expandedRoles.has(role.id) && (
+            {expandedRoles.has(roleId) && (
               <div className="px-6 pb-6">
                 <div className="border-t border-gray-200 pt-4">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Danh sách quyền:</h4>
@@ -218,7 +208,8 @@ const RoleManagementPage: React.FC = () => {
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
 
         {roles.length === 0 && !loading && (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
@@ -261,6 +252,24 @@ const RoleManagementPage: React.FC = () => {
         }}
         onSuccess={loadRoles}
         editRole={editingRole}
+      />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmTitle}
+        description={confirmDescription}
+        confirmText="Xác nhận"
+        cancelText="Hủy"
+        destructive
+        onCancel={() => {
+          setConfirmOpen(false);
+          setConfirmAction(null);
+        }}
+        onConfirm={() => {
+          if (confirmAction) {
+            confirmAction();
+          }
+        }}
       />
     </div>
   );

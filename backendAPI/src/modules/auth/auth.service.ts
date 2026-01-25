@@ -84,7 +84,7 @@ export class AuthService {
     const populatedUser = await this.userModel
       .findById(user._id)
       .populate('campusId', 'campusCode campusName address')
-      .populate('roleId', 'roleCode roleLevel roleName')
+      .populate('roleId', 'roleCode roleLevel roleName canAccessWeb')
       .exec();
 
     // 6. Get permissions for this role
@@ -99,6 +99,7 @@ export class AuthService {
         roleCode: role.roleCode,
         roleName: role.roleName,
         roleLevel: role.roleLevel,
+        canAccessWeb: role.canAccessWeb || false,
         description: role.description,
       };
 
@@ -180,6 +181,7 @@ export class AuthService {
       roleDetails = {
         id: role._id.toString(),
         roleName: role.roleName,
+        canAccessWeb: role.canAccessWeb || false,
         description: role.description,
       };
 

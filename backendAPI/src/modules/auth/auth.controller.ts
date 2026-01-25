@@ -69,13 +69,6 @@ export class AuthController {
 
       // Redirect to frontend with token and full response data
       const redirectUrl = `${frontendUrl}/auth/callback?token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(responseData))}`;
-
-      console.log('🔄 Redirecting to:', redirectUrl);
-      console.log('📦 Response includes:', {
-        user: result.user.email,
-        role: result.roleDetails?.roleName || 'N/A',
-        permissionsCount: result.permissions?.length || 0,
-      });
       return res.redirect(redirectUrl);
     } catch (error) {
       console.error('❌ Auth error:', error.message);

@@ -12,17 +12,21 @@ import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @Controller('roles')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   /**
    * POST /api/roles
    * Create new role with permissions
+   * Requires: roles.create permission
    */
   @Post()
+  @RequirePermissions('roles.create')
   async create(@Body() createRoleDto: CreateRoleDto) {
     const role = await this.rolesService.create(createRoleDto);
     return {
@@ -35,8 +39,10 @@ export class RolesController {
   /**
    * GET /api/roles
    * Get all roles with permissions
+   * Requires: roles.read permission
    */
   @Get()
+  @RequirePermissions('roles.read')
   async findAll() {
     const roles = await this.rolesService.findAll();
     return {
@@ -48,8 +54,10 @@ export class RolesController {
   /**
    * GET /api/roles/permissions
    * Get all available permissions for assignment
+   * Requires: roles.read permission
    */
   @Get('permissions')
+  @RequirePermissions('roles.read')
   async getAllPermissions() {
     const permissions = await this.rolesService.getAllPermissions();
     return {
@@ -61,8 +69,10 @@ export class RolesController {
   /**
    * GET /api/roles/:id
    * Get role by ID with permissions
+   * Requires: roles.read permission
    */
   @Get(':id')
+  @RequirePermissions('roles.read')
   async findOne(@Param('id') id: string) {
     const role = await this.rolesService.findOne(id);
     return {
@@ -74,8 +84,10 @@ export class RolesController {
   /**
    * PATCH /api/roles/:id
    * Update role and permissions
+   * Requires: roles.update permission
    */
   @Patch(':id')
+  @RequirePermissions('roles.update')
   async update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
     const role = await this.rolesService.update(id, updateRoleDto);
     return {
@@ -88,8 +100,10 @@ export class RolesController {
   /**
    * DELETE /api/roles/:id
    * Delete role
+   * Requires: roles.delete permission
    */
   @Delete(':id')
+  @RequirePermissions('roles.delete')
   async remove(@Param('id') id: string) {
     await this.rolesService.remove(id);
     return {

@@ -70,6 +70,7 @@ const rolesResult = db.roles.insertMany([
     roleLevel: 0,
     scope: "GLOBAL",
     canManageRoles: true,
+    canAccessWeb: true,  // ✅ Super Admin can access web
     description: "Quản trị viên tối cao - Quản lý toàn hệ thống, có thể truy cập mọi campus",
     isActive: true,
     createdAt: new Date(),
@@ -83,6 +84,7 @@ const rolesResult = db.roles.insertMany([
     roleLevel: 2,
     scope: "CAMPUS",
     canManageRoles: false,
+    canAccessWeb: true,  // ✅ Training Officer can access web
     description: "Nhân viên đào tạo - Quản lý lịch học, phòng học, duyệt booking",
     isActive: true,
     createdAt: new Date(),
@@ -96,6 +98,7 @@ const rolesResult = db.roles.insertMany([
     roleLevel: 3,
     scope: "SELF",
     canManageRoles: false,
+    canAccessWeb: false,  // ❌ Lecturer: mobile only (can be changed by Training Officer)
     description: "Giảng viên - Dạy học, booking phòng, báo cáo sự cố, transfer phòng",
     isActive: true,
     createdAt: new Date(),
@@ -109,6 +112,7 @@ const rolesResult = db.roles.insertMany([
     roleLevel: 4,
     scope: "SELF",
     canManageRoles: false,
+    canAccessWeb: false,  // ❌ Student: mobile only
     description: "Sinh viên - Xem lịch học, booking phòng tự học",
     isActive: true,
     createdAt: new Date(),
@@ -122,6 +126,7 @@ const rolesResult = db.roles.insertMany([
     roleLevel: 3,
     scope: "CAMPUS",
     canManageRoles: false,
+    canAccessWeb: false,  // ❌ Security: mobile only (can be changed by Training Officer)
     description: "Bảo vệ - Giám sát an ninh, báo cáo sự cố, xem access logs",
     isActive: true,
     createdAt: new Date(),
@@ -209,6 +214,9 @@ const permissionsResult = db.permissions.insertMany([
   // Access Logs permissions (IoT security logs)
   { _id: ObjectId("680000000000000000000048"), permissionName: "access_logs.read", permissionCode: "READ_ACCESS_LOG", resource: "access_logs", action: "read", description: "Xem log ra vào phòng", isActive: true, createdAt: new Date(), updatedAt: new Date() },
   { _id: ObjectId("680000000000000000000049"), permissionName: "access_logs.manage", permissionCode: "MANAGE_ACCESS_LOGS", resource: "access_logs", action: "manage", description: "Quản lý access logs", isActive: true, createdAt: new Date(), updatedAt: new Date() }
+  ,
+  // System Logs permissions
+  { _id: ObjectId("680000000000000000000050"), permissionName: "logs.read", permissionCode: "READ_SYSTEM_LOG", resource: "logs", action: "read", description: "Xem audit log hệ thống", isActive: true, createdAt: new Date(), updatedAt: new Date() }
 ]);
 
 print(`✅ Inserted ${Object.keys(permissionsResult.insertedIds).length} permissions`);
@@ -231,17 +239,19 @@ const superAdminPermissions = allPermissions.map(p => ({
   updatedAt: new Date()
 }));
 
-// Training Officer: users.read, rooms.*, schedules.*, bookings.*, lockers.read, incidents (read/update/resolve), notifications (create/read), access_logs.read
+// Training Officer: users.read, roles.*, rooms.*, schedules.*, bookings.*, lockers.read, incidents (read/update/resolve), notifications (create/read), access_logs.read
 const trainingOfficerPermissions = allPermissions
   .filter(p => [
     "users.read",
+    "roles.create", "roles.read", "roles.update", "roles.delete",
     "rooms.create", "rooms.read", "rooms.update", "rooms.delete", "rooms.manage",
     "schedules.create", "schedules.read", "schedules.update", "schedules.delete", "schedules.manage",
     "bookings.create", "bookings.read", "bookings.update", "bookings.delete", "bookings.approve", "bookings.manage",
     "lockers.read",
     "incidents.read", "incidents.update", "incidents.resolve",
     "notifications.create", "notifications.read",
-    "access_logs.read"
+    "access_logs.read",
+    "logs.read"
   ].includes(p.permissionName))
   .map(p => ({
     roleId: ObjectId("670000000000000000000003"),
@@ -342,6 +352,22 @@ const usersResult = db.users.insertMany([
     createdAt: new Date(),
     updatedAt: new Date()
   },
+  //admin 2
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf092a"),
+    googleId: null,
+    email: "sangnqCE150621@fpt.edu.vn",
+    fullName: "Sang Nguyen",
+    avatar: "https://lh3.googleusercontent.com/a/default",
+    roleId: ObjectId("670000000000000000000001"),  // Super Admin
+    employeeId: "CE150621",
+    department: "Software Engineering",
+    phone: "0123456789",
+    campusId: ObjectId("693ad44426d23ee0a8bf08f5"),  // Can Tho campus
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
   // Training Officer
   {
     _id: ObjectId("693ad44526d23ee0a8bf091c"),
@@ -374,18 +400,34 @@ const usersResult = db.users.insertMany([
     createdAt: new Date(),
     updatedAt: new Date()
   },
-  // Lecturer 2
+  //admin 3
   {
-    _id: ObjectId("693ad44526d23ee0a8bf091a"),
-    googleId: "lecturer_002",
-    email: "sangnqCE150621@fpt.edu.vn",
-    fullName: "Nguyễn Quang Sang",
-    avatar: "",
-    roleId: ObjectId("670000000000000000000004"),  // Lecturer role
-    employeeId: "GV002",
+    _id: ObjectId("693ad44526d23ee0a8bf092b"),
+    googleId: null,
+    email: "KietlltCE170145@fpt.edu.vn",
+    fullName: "Kiet Le",
+    avatar: "https://lh3.googleusercontent.com/a/default",
+    roleId: ObjectId("670000000000000000000001"),  // Super Admin
+    employeeId: "CE170145",
     department: "Software Engineering",
-    phone: "0987654321",
-    campusId: ObjectId("693ad44426d23ee0a8bf08f5"),
+    phone: "0123456789",
+    campusId: ObjectId("693ad44426d23ee0a8bf08f5"),  // Can Tho campus
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  //admin 4
+   {
+    _id: ObjectId("693ad44526d23ee0a8bf092c"),
+    googleId: null,
+    email: "NhuCHNCE181233@fpt.edu.vn",
+    fullName: "Nhu Cao",
+    avatar: "https://lh3.googleusercontent.com/a/default",
+    roleId: ObjectId("670000000000000000000001"),  // Super Admin
+    employeeId: "CE181233",
+    department: "Software Engineering",
+    phone: "0123456789",
+    campusId: ObjectId("693ad44426d23ee0a8bf08f5"),  // Can Tho campus
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date()
@@ -399,7 +441,7 @@ const usersResult = db.users.insertMany([
     avatar: "",
     roleId: ObjectId("670000000000000000000005"),
     studentId: "SE171234",
-    department: "Software Engineering",
+    department: "Leader CLB Coder",
     phone: "0912345679",
     campusId: ObjectId("693ad44426d23ee0a8bf08f5"),
     isActive: true,

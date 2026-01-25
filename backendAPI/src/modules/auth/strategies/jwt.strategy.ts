@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       .findById(userId)
       .select('-faceData -fingerprintData')
       .populate('campusId', 'campusCode campusName')
-      .populate('roleId', 'roleCode roleLevel')
+      .populate('roleId', 'roleCode roleLevel canAccessWeb')
       .exec();
 
     if (!user || !user.isActive) {
@@ -49,14 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     const permissions = rolePermissions.map((rp: any) => rp.permissionId.permissionName);
 
-    console.log('🔑 JWT Strategy validate:', {
-      userId: user._id,
-      email: user.email,
-      roleCode: (user.roleId as any).roleCode,
-      rolePermissionsCount: rolePermissions.length,
-      permissionsExtracted: permissions.length,
-      permissionsSample: permissions.slice(0, 3),
-    });
+    
 
     // Attach enhanced data to request.user
     return {
@@ -66,6 +59,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       roleId: user.roleId,
       roleCode: (user.roleId as any).roleCode,
       roleLevel: (user.roleId as any).roleLevel,
+      canAccessWeb: (user.roleId as any).canAccessWeb || false,
       campusId: user.campusId?._id || null,
       campusCode: (user.campusId as any)?.campusCode || null,
       permissions,

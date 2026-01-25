@@ -4,10 +4,17 @@ import { Permission } from './auth.types';
 export type { Permission };
 
 export interface Role {
-  id: string;
+  id?: string;
+  _id?: string;
   roleName: string;
+  roleCode?: string;
+  roleLevel?: number;
+  scope?: 'GLOBAL' | 'CAMPUS' | 'SELF';
+  campusId?: string | null;
   description?: string;
   isActive: boolean;
+  canAccessWeb?: boolean; // Can this role access web application
+  canManageRoles?: boolean;
   permissionCount?: number;
   permissions: Permission[];
   createdAt?: Date;
@@ -16,16 +23,28 @@ export interface Role {
 
 export interface CreateRoleDto {
   roleName: string;
+  roleCode: string;
+  roleLevel: number;
+  scope?: 'GLOBAL' | 'CAMPUS' | 'SELF';
+  campusId?: string | null;
   description?: string;
   permissionIds: string[];
   isActive?: boolean;
+  canManageRoles?: boolean;
+  canAccessWeb?: boolean; // Default: false (mobile only)
 }
 
 export interface UpdateRoleDto {
   roleName?: string;
+  roleCode?: string;
+  roleLevel?: number;
+  scope?: 'GLOBAL' | 'CAMPUS' | 'SELF';
+  campusId?: string | null;
   description?: string;
   permissionIds?: string[];
   isActive?: boolean;
+  canManageRoles?: boolean;
+  canAccessWeb?: boolean;
 }
 
 export interface RoleListResponse {

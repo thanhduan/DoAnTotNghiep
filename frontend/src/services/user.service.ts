@@ -13,7 +13,7 @@ export const userService = {
    */
   getAll: async (filters?: FilterUserDto): Promise<UserListItem[]> => {
     const params = new URLSearchParams();
-    if (filters?.role) params.append('role', filters.role);
+    if (filters?.roleId) params.append('roleId', filters.roleId);
     if (filters?.campusId) params.append('campusId', filters.campusId);
     if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
     if (filters?.search) params.append('search', filters.search);
@@ -67,6 +67,26 @@ export const userService = {
   activate: async (id: string): Promise<UserListItem> => {
     const response = await api.put<{ success: boolean; data: UserListItem; message: string }>(
       `/users/${id}/activate`
+    );
+    return response.data;
+  },
+
+  /**
+   * Ban user (set inactive)
+   */
+  ban: async (id: string): Promise<UserListItem> => {
+    const response = await api.put<{ success: boolean; data: UserListItem; message: string }>(
+      `/users/${id}/ban`
+    );
+    return response.data;
+  },
+
+  /**
+   * Unban user (set active)
+   */
+  unban: async (id: string): Promise<UserListItem> => {
+    const response = await api.put<{ success: boolean; data: UserListItem; message: string }>(
+      `/users/${id}/unban`
     );
     return response.data;
   },

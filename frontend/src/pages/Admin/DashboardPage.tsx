@@ -22,7 +22,7 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-lg p-6">
         <h1 className="text-3xl font-bold mb-2">
           Xin chào, {user?.fullName || 'User'}!
         </h1>

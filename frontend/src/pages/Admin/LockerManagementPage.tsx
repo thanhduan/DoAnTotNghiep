@@ -365,7 +365,7 @@ const LockerManagementPage: React.FC = () => {
                         >
                           Sửa
                         </Button>
-                        <Button size="sm" variant="danger" onClick={() => handleDelete(locker.id, locker.lockerNumber)}>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(locker.id, locker.lockerNumber)}>
                           Xóa
                         </Button>
                       </div>

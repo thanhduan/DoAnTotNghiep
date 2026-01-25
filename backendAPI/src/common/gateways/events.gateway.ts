@@ -13,7 +13,9 @@ import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(',').map((origin) => origin.trim())
+      : ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
   },
   namespace: '/events',
@@ -145,5 +147,13 @@ export class EventsGateway
   // Send command to specific locker
   sendToLocker(lockerNumber: number, command: string, data: any) {
     this.server.emit(`locker:${lockerNumber}:${command}`, data);
+  }
+
+  // Broadcast audit log update
+  broadcastAuditLog(entry: string) {
+    this.server.emit('audit:log', {
+      entry,
+      timestamp: new Date(),
+    });
   }
 }

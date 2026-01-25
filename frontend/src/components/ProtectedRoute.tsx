@@ -41,6 +41,31 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
+  // GLOBAL CHECK: Verify role can access web (before any route-specific checks)
+  if (roleDetails && roleDetails.canAccessWeb === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-6xl mb-4">🚫</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Không thể truy cập Web</h2>
+          <p className="text-gray-600 mb-4">
+            Vai trò <strong>{roleDetails.roleName}</strong> chỉ có thể sử dụng ứng dụng Mobile.
+            Vui lòng sử dụng app di động để truy cập hệ thống.
+          </p>
+          <button
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = '/login';
+            }}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Priority: Permission-based access first (new approach)
   // Then fallback to role-based (legacy support)
   

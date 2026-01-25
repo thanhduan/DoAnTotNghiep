@@ -115,6 +115,36 @@ export class UsersController {
   }
 
   /**
+   * Ban user (set inactive)
+   * PUT /api/users/:id/ban
+   */
+  @Put(':id/ban')
+  @RequirePermissions('users.update')
+  async ban(@Param('id') id: string) {
+    const user = await this.usersService.ban(id);
+    return {
+      success: true,
+      message: 'Ban user thành công',
+      data: user,
+    };
+  }
+
+  /**
+   * Unban user (set active)
+   * PUT /api/users/:id/unban
+   */
+  @Put(':id/unban')
+  @RequirePermissions('users.update')
+  async unban(@Param('id') id: string) {
+    const user = await this.usersService.unban(id);
+    return {
+      success: true,
+      message: 'Unban user thành công',
+      data: user,
+    };
+  }
+
+  /**
    * Delete user (soft delete)
    * DELETE /api/users/:id
    */
