@@ -59,15 +59,14 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  // Fetch campuses
-  const fetchCampuses = async () => {
-    try {
-      const data = await campusService.getAll();
-      setCampuses(data);
-    } catch (error: any) {
-      console.error('Error fetching campuses:', error);
-    }
-  };
+  // Fetch campuses - commented out as not used
+  // const fetchCampuses = async () => {
+  //   try {
+  //     const data = await campusService.getAll();
+  //   } catch (error: any) {
+  //     console.error('Error fetching campuses:', error);
+  //   }
+  // };
 
   const fetchRoles = async () => {
     try {
@@ -80,7 +79,7 @@ const UserManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-    fetchCampuses();
+    // fetchCampuses(); // Not used
     fetchRoles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
