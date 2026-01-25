@@ -1,0 +1,47 @@
+import { IsString, IsNumber, IsArray, IsOptional, IsEnum, IsBoolean, IsMongoId, Min } from 'class-validator';
+
+export class CreateRoomDto {
+  @IsString()
+  roomCode: string;
+
+  @IsString()
+  roomName: string;
+
+  @IsString()
+  building: string;
+
+  @IsNumber()
+  @Min(1)
+  floor: number;
+
+  @IsNumber()
+  @Min(1)
+  capacity: number;
+
+  @IsString()
+  roomType: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  facilities?: string[];
+
+  @IsNumber()
+  @Min(0)
+  lockerNumber: number;
+
+  @IsMongoId()
+  campusId: string;
+
+  @IsEnum(['available', 'occupied', 'maintenance', 'reserved'])
+  @IsOptional()
+  status?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+}

@@ -11,8 +11,10 @@ import AuthCallbackPage from '../pages/AuthCallbackPage';
 import DashboardPage from '../pages/Admin/DashboardPage';
 import UserManagementPage from '../pages/Admin/UserManagementPage';
 import LockerManagementPage from '../pages/Admin/LockerManagementPage';
+import RoomManagementPage from '../pages/Admin/RoomManagementPage';
 import RoleManagementPage from '../pages/Admin/RoleManagementPage';
 import AuditLogPage from '../pages/Admin/AuditLogPage';
+
 
 const AppRoutes: React.FC = () => {
   return (
@@ -94,10 +96,7 @@ const AppRoutes: React.FC = () => {
                 requiredPermissions={[PERMISSIONS.ROOMS_READ]}
               >
                 <AdminLayout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Quản lý Phòng học</h2>
-                    <p className="mt-2 text-gray-600">Trang này đang được phát triển</p>
-                  </div>
+                  <RoomManagementPage />
                 </AdminLayout>
               </ProtectedRoute>
             }
