@@ -14,7 +14,7 @@ import LockerManagementPage from '../pages/Admin/LockerManagementPage';
 import RoomManagementPage from '../pages/Admin/RoomManagementPage';
 import RoleManagementPage from '../pages/Admin/RoleManagementPage';
 import AuditLogPage from '../pages/Admin/AuditLogPage';
-
+import ScheduleManagementPage from '../pages/Admin/ScheduleManagementPage';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -109,10 +109,7 @@ const AppRoutes: React.FC = () => {
                 requiredPermissions={[PERMISSIONS.SCHEDULES_READ]}
               >
                 <AdminLayout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Lịch học</h2>
-                    <p className="mt-2 text-gray-600">Trang này đang được phát triển</p>
-                  </div>
+                  <ScheduleManagementPage />
                 </AdminLayout>
               </ProtectedRoute>
             }
