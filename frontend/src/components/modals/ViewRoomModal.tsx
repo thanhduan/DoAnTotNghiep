@@ -1,5 +1,6 @@
 import React from 'react';
 import { Room } from '../../types/room.types';
+import { Device } from '../../types/device.types';
 
 interface ViewRoomModalProps {
   isOpen: boolean;
@@ -37,6 +38,21 @@ const ViewRoomModal: React.FC<ViewRoomModalProps> = ({
       </span>
     );
   };
+
+  const getDeviceStatusBadge = (status: string) => {
+    const statusConfig = {
+      ok: { text: 'Hoạt động', className: 'bg-emerald-100 text-emerald-800' },
+      broken: { text: 'Hư hỏng', className: 'bg-red-100 text-red-800' },
+    };
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.ok;
+    return (
+      <span className={`px-3 py-1 text-sm rounded-full ${config.className}`}>
+        {config.text}
+      </span>
+    );
+  };
+
+  const devices = (room.devices || []) as Device[];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -98,22 +114,34 @@ const ViewRoomModal: React.FC<ViewRoomModalProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-2">
-              Thiết bị & Tiện ích
+              Thiết bị trong phòng
             </label>
-            <div className="flex flex-wrap gap-2">
-              {room.facilities && room.facilities.length > 0 ? (
-                room.facilities.map((facility, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                  >
-                    {facility}
-                  </span>
-                ))
-              ) : (
-                <p className="text-gray-400 italic">Không có thiết bị nào</p>
-              )}
-            </div>
+            {devices.length > 0 ? (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Mã thiết bị</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Tên thiết bị</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Số lượng</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {devices.map((device) => (
+                      <tr key={device._id}>
+                        <td className="px-3 py-2 font-medium text-gray-700">{device.deviceCode}</td>
+                        <td className="px-3 py-2 text-gray-700">{device.deviceName}</td>
+                        <td className="px-3 py-2 text-gray-700">{device.quantity}</td>
+                        <td className="px-3 py-2">{getDeviceStatusBadge(device.deviceStatus)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-400 italic">Chưa có thiết bị nào</p>
+            )}
           </div>
 
           <div>
@@ -122,18 +150,7 @@ const ViewRoomModal: React.FC<ViewRoomModalProps> = ({
             </label>
             <div className="flex items-center space-x-4">
               {getStatusBadge(room.status)}
-              {onStatusChange && (
-                <select
-                  value={room.status}
-                  onChange={(e) => onStatusChange(room._id, e.target.value)}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm"
-                >
-                  <option value="available">Khả dụng</option>
-                  <option value="occupied">Đang sử dụng</option>
-                  <option value="maintenance">Bảo trì</option>
-                  <option value="reserved">Đã đặt</option>
-                </select>
-              )}
+              
             </div>
           </div>
 
@@ -149,9 +166,9 @@ const ViewRoomModal: React.FC<ViewRoomModalProps> = ({
               <label className="block text-sm font-medium text-gray-500">Trạng thái hoạt động</label>
               <p className="text-lg">
                 {room.isActive ? (
-                  <span className="text-green-600">✓ Đang hoạt động</span>
+                  <span className="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800">Đang hoạt động</span>
                 ) : (
-                  <span className="text-red-600">✗ Không hoạt động</span>
+                  <span className="px-3 py-1 text-sm rounded-full bg-red-100 text-red-800">Không hoạt động</span>
                 )}
               </p>
             </div>

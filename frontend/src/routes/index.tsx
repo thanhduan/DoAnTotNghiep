@@ -15,6 +15,8 @@ import RoomManagementPage from '../pages/Admin/RoomManagementPage';
 import RoleManagementPage from '../pages/Admin/RoleManagementPage';
 import AuditLogPage from '../pages/Admin/AuditLogPage';
 import ScheduleManagementPage from '../pages/Admin/ScheduleManagementPage';
+import DeviceManagementPage from '../pages/Admin/DeviceManagementPage';
+
 
 const AppRoutes: React.FC = () => {
   return (
@@ -97,6 +99,19 @@ const AppRoutes: React.FC = () => {
               >
                 <AdminLayout>
                   <RoomManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/devices"
+            element={
+              <ProtectedRoute
+                requiredPermissions={[PERMISSIONS.ROOMS_READ]}
+              >
+                <AdminLayout>
+                  <DeviceManagementPage />
                 </AdminLayout>
               </ProtectedRoute>
             }

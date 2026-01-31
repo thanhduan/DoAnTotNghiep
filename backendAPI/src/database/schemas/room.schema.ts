@@ -54,3 +54,12 @@ export class Room {
 }
 
 export const RoomSchema = SchemaFactory.createForClass(Room);
+
+RoomSchema.set('toJSON', { virtuals: true });
+RoomSchema.set('toObject', { virtuals: true });
+
+RoomSchema.virtual('devices', {
+  ref: 'Device',
+  localField: '_id',
+  foreignField: 'roomId',
+});

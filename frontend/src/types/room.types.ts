@@ -1,3 +1,5 @@
+import { Device } from './device.types';
+
 export interface Room {
   _id: string;
   roomCode: string;
@@ -6,7 +8,6 @@ export interface Room {
   floor: number;
   capacity: number;
   roomType: string;
-  facilities: string[];
   lockerNumber: number;
   campusId: string | {
     _id: string;
@@ -16,6 +17,7 @@ export interface Room {
   status: 'available' | 'occupied' | 'maintenance' | 'reserved';
   description?: string;
   isActive: boolean;
+  devices?: Device[];
   createdAt: string;
   updatedAt: string;
 }
@@ -27,7 +29,6 @@ export interface CreateRoomDto {
   floor: number;
   capacity: number;
   roomType: string;
-  facilities?: string[];
   lockerNumber: number;
   campusId: string;
   status?: 'available' | 'occupied' | 'maintenance' | 'reserved';
@@ -42,7 +43,6 @@ export interface UpdateRoomDto {
   floor?: number;
   capacity?: number;
   roomType?: string;
-  facilities?: string[];
   lockerNumber?: number;
   campusId?: string;
   status?: 'available' | 'occupied' | 'maintenance' | 'reserved';

@@ -61,6 +61,7 @@ export class RoomService {
     return await this.roomModel
       .find(filter)
       .populate('campusId')
+      .populate('devices')
       .sort({ building: 1, floor: 1, roomCode: 1 })
       .exec();
   }
@@ -73,6 +74,7 @@ export class RoomService {
     const room = await this.roomModel
       .findById(id)
       .populate('campusId')
+      .populate('devices')
       .exec();
     
     if (!room) {
@@ -86,6 +88,7 @@ export class RoomService {
     const room = await this.roomModel
       .findOne({ roomCode })
       .populate('campusId')
+      .populate('devices')
       .exec();
     
     if (!room) {
@@ -119,6 +122,7 @@ export class RoomService {
     const room = await this.roomModel
       .findByIdAndUpdate(id, updateData, { new: true })
       .populate('campusId')
+      .populate('devices')
       .exec();
     
     if (!room) {
@@ -155,6 +159,7 @@ export class RoomService {
     const room = await this.roomModel
       .findByIdAndUpdate(id, { status }, { new: true })
       .populate('campusId')
+      .populate('devices')
       .exec();
     
     if (!room) {
@@ -174,6 +179,7 @@ export class RoomService {
     return await this.roomModel
       .find(filter)
       .populate('campusId')
+      .populate('devices')
       .sort({ building: 1, floor: 1, roomCode: 1 })
       .exec();
   }
@@ -188,6 +194,7 @@ export class RoomService {
     return await this.roomModel
       .find(filter)
       .populate('campusId')
+      .populate('devices')
       .sort({ floor: 1, roomCode: 1 })
       .exec();
   }
