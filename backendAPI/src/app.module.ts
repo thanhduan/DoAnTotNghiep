@@ -13,6 +13,8 @@ import { RoomModule } from './modules/room/room.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
+import { ScheduleModule } from './modules/schedule/schedule.module';
+import { TimeSlotsModule } from './modules/time-slots/time-slots.module';
 import { DeviceModule } from './modules/device/device.module';
 
 @Module({
@@ -31,6 +33,8 @@ import { DeviceModule } from './modules/device/device.module';
     RoomModule,
     RolesModule,
     AuditLogsModule,
+    ScheduleModule,
+    TimeSlotsModule,
   ],
   controllers: [AppController],
   providers: [
