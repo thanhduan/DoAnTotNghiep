@@ -21,7 +21,6 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     floor: 1,
     capacity: 30,
     roomType: 'classroom',
-    facilities: [],
     lockerNumber: 0,
     campusId: '',
     status: 'available',
@@ -29,29 +28,11 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     isActive: true,
   });
 
-  const [facilityInput, setFacilityInput] = useState('');
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
-  const addFacility = () => {
-    if (facilityInput.trim() && !formData.facilities?.includes(facilityInput.trim())) {
-      setFormData({
-        ...formData,
-        facilities: [...(formData.facilities || []), facilityInput.trim()],
-      });
-      setFacilityInput('');
-    }
-  };
-
-  const removeFacility = (facility: string) => {
-    setFormData({
-      ...formData,
-      facilities: formData.facilities?.filter((f) => f !== facility) || [],
-    });
-  };
 
   if (!isOpen) return null;
 
@@ -192,44 +173,8 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Thiết bị & Tiện ích
-            </label>
-            <div className="flex space-x-2 mb-2">
-              <input
-                type="text"
-                value={facilityInput}
-                onChange={(e) => setFacilityInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFacility())}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="VD: projector, whiteboard..."
-              />
-              <button
-                type="button"
-                onClick={addFacility}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              >
-                Thêm
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.facilities?.map((facility, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm"
-                >
-                  {facility}
-                  <button
-                    type="button"
-                    onClick={() => removeFacility(facility)}
-                    className="ml-2 text-red-600 hover:text-red-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
+          <div className="rounded-md border border-dashed border-gray-300 p-3 text-sm text-gray-600">
+            <span className="font-medium">Thiết bị</span>: Quản lý riêng trong phần thiết bị của phòng.
           </div>
 
           <div>
