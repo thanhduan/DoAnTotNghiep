@@ -16,6 +16,7 @@ import RoleManagementPage from '../pages/Admin/RoleManagementPage';
 import AuditLogPage from '../pages/Admin/AuditLogPage';
 import ScheduleManagementPage from '../pages/Admin/ScheduleManagementPage';
 import DeviceManagementPage from '../pages/Admin/DeviceManagementPage';
+import UserProfilePage from '../pages/Admin/UserProfilePage';
 
 
 const AppRoutes: React.FC = () => {
@@ -112,6 +113,17 @@ const AppRoutes: React.FC = () => {
               >
                 <AdminLayout>
                   <DeviceManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <UserProfilePage />
                 </AdminLayout>
               </ProtectedRoute>
             }
