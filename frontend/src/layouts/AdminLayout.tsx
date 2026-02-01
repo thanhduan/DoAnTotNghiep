@@ -47,7 +47,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
     { id: 'approval', label: 'Approval', icon: ClipboardCheck, path: '/approval' },
     { id: 'schedule', label: 'Schedule', icon: Calendar, path: '/schedules' },
-    { id: 'campus', label: 'Campus', icon: Building2, path: '/campus' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 
