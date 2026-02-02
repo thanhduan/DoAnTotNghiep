@@ -60,8 +60,8 @@ const EditScheduleModal: React.FC<Props> = ({ isOpen, onClose, onUpdate, schedul
   useEffect(() => {
     if (isOpen && schedule) {
       fetchData();
-      const roomId = typeof schedule.roomId === 'string' ? schedule.roomId : schedule.roomId._id;
-      const lecturerId = typeof schedule.lecturerId === 'string' ? schedule.lecturerId : schedule.lecturerId._id;
+      const roomId = typeof schedule.roomId === 'string' ? schedule.roomId : schedule.roomId?._id || '';
+      const lecturerId = typeof schedule.lecturerId === 'string' ? schedule.lecturerId : schedule.lecturerId?._id || '';
       const dateStart = typeof schedule.dateStart === 'string' 
         ? schedule.dateStart.split('T')[0]
         : new Date(schedule.dateStart).toISOString().split('T')[0];
@@ -141,6 +141,17 @@ const EditScheduleModal: React.FC<Props> = ({ isOpen, onClose, onUpdate, schedul
     if (!form.classCode?.trim()) errs.classCode = 'Vui lòng nhập mã lớp';
     if (!form.subjectName?.trim()) errs.subjectName = 'Vui lòng nhập tên môn học';
 
+    // start < end
+    if (form.startTime && form.endTime) {
+      const [sh, sm] = form.startTime.split(':').map(Number);
+      const [eh, em] = form.endTime.split(':').map(Number);
+      const startMinutes = sh * 60 + sm;
+      const endMinutes = eh * 60 + em;
+      if (startMinutes >= endMinutes) {
+        errs.endTime = 'Giờ kết thúc phải sau giờ bắt đầu';
+      }
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -170,13 +181,13 @@ const EditScheduleModal: React.FC<Props> = ({ isOpen, onClose, onUpdate, schedul
         status: form.status,
       };
 
-      const originalRoomId = typeof schedule.roomId === 'string' ? schedule.roomId : schedule.roomId._id;
-      if (form.roomId !== originalRoomId) {
+      const originalRoomId = typeof schedule.roomId === 'string' ? schedule.roomId : schedule.roomId?._id;
+      if (form.roomId && form.roomId !== originalRoomId) {
         updatePayload.roomId = form.roomId;
       }
 
-      const originalLecturerId = typeof schedule.lecturerId === 'string' ? schedule.lecturerId : schedule.lecturerId._id;
-      if (form.lecturerId !== originalLecturerId) {
+      const originalLecturerId = typeof schedule.lecturerId === 'string' ? schedule.lecturerId : schedule.lecturerId?._id;
+      if (form.lecturerId && form.lecturerId !== originalLecturerId) {
         updatePayload.lecturerId = form.lecturerId;
       }
 

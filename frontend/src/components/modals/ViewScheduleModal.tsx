@@ -8,6 +8,8 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Schedule } from '../../types/schedule.types';
+import PermissionGuard from '../PermissionGuard';
+import { PERMISSIONS } from '../../utils/permissions';
 
 interface Props {
   isOpen: boolean;
@@ -210,7 +212,9 @@ const ViewScheduleModal: React.FC<Props> = ({ isOpen, onClose, onEdit, schedule 
           <Button variant="outline" onClick={onClose}>
             Đóng
           </Button>
-          <Button onClick={onEdit}>Chỉnh sửa</Button>
+          <PermissionGuard permissions={[PERMISSIONS.SCHEDULES_UPDATE]}>
+            <Button onClick={onEdit}>Chỉnh sửa</Button>
+          </PermissionGuard>
         </DialogFooter>
       </DialogContent>
     </Dialog>
