@@ -20,6 +20,11 @@ type Campus = {
   campusName: string;
 };
 
+type Solenoid = {
+  id: string;
+  connected: boolean;
+};
+
 const LockerManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [lockers, setLockers] = useState<LockerEntity[]>([]);
@@ -45,17 +50,31 @@ const LockerManagementPage: React.FC = () => {
     try {
       setLoading(true);
       console.log('Fetching lockers and campuses...');
+
+      // Log the request payload for debugging
+      console.log('Request payload:', {
+        campusFilter,
+        statusFilter,
+        activeStatusFilter,
+        search,
+      });
+
+      // Pass filters as query parameters to the backend
       const [lockerRes, campusRes] = await Promise.all([
-        lockerService.getAll(),
+        lockerService.findAllWithIoT({
+          campusId: campusFilter !== 'all' ? campusFilter : undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          isActive: activeStatusFilter !== 'all' ? activeStatusFilter === 'active' : undefined,
+          search: search || undefined,
+        }),
         campusService.getAll(),
       ]);
 
       console.log('Locker API Response:', lockerRes);
       console.log('Campus API Response:', campusRes);
 
-      // Map _id -> id
       const lockersWithId = Array.isArray(lockerRes)
-        ? lockerRes.map((l) => ({ ...l, id: l._id ?? l.id }))
+        ? lockerRes.map((l: any) => ({ ...l, id: l._id ?? l.id }))
         : [];
       setLockers(lockersWithId);
 
@@ -92,7 +111,7 @@ const LockerManagementPage: React.FC = () => {
   });
 
   const sortedLockers = [...filteredLockers].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    (b, a) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() // Updated sorting logic for better UX
   );
 
   const paginatedLockers = sortedLockers.slice(
@@ -108,6 +127,9 @@ const LockerManagementPage: React.FC = () => {
       setCurrentPage(lastPageIndex);
     }
   }, [filteredLockers.length, currentPage]);
+
+  // Ensure pageCount is never negative
+  const pageCount = Math.max(0, Math.ceil(filteredLockers.length / itemsPerPage));
 
   // =========================
   // Handlers
@@ -133,7 +155,6 @@ const LockerManagementPage: React.FC = () => {
       toast.error('Tạo tủ thất bại.');
     }
   };
-
 
   const handleEdit = async (data: LockerPayload) => {
     if (!selectedLocker || !selectedLocker.id) {
@@ -312,13 +333,14 @@ const LockerManagementPage: React.FC = () => {
                 <th className="px-4 py-2 border border-gray-300 w-32 text-center">Trạng thái</th>
                 <th className="px-4 py-2 border border-gray-300 w-24 text-center">Pin</th>
                 <th className="px-4 py-2 border border-gray-300 w-40 text-center">Trạng Thái Hoạt Động</th>
+                <th className="px-4 py-2 border border-gray-300 w-40 text-center">Số Khóa Điện Tử</th>
                 <th className="px-4 py-2 border border-gray-300 w-40 text-center">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {paginatedLockers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-2 text-gray-500 text-center">
+                  <td colSpan={9} className="px-4 py-2 text-gray-500 text-center">
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -331,8 +353,12 @@ const LockerManagementPage: React.FC = () => {
                     <td className="px-4 py-2 border border-gray-300 text-center text-blue-600">
                       {locker.lockerNumber}
                     </td>
-                    <td className="px-4 py-2 border border-gray-300 text-left">{locker.position}</td>
-                    <td className="px-4 py-2 border border-gray-300 text-left">{locker.campusName}</td>
+                    <td className="px-4 py-2 border border-gray-300 text-left">
+                      {locker.position}
+                    </td>
+                    <td className="px-4 py-2 border border-gray-300 text-left">
+                      {locker.campusName}
+                    </td>
                     <td className={`px-4 py-2 border border-gray-300 text-center ${getStatusColor(locker.status)}`}>
                       {capitalize(locker.status)}
                     </td>
@@ -343,6 +369,9 @@ const LockerManagementPage: React.FC = () => {
                       <span className={`px-2 py-1 rounded-lg text-white ${locker.isActive ? 'bg-green-500' : 'bg-red-500'}`}>
                         {locker.isActive ? 'Hoạt Động' : 'Không Hoạt Động'}
                       </span>
+                    </td>
+                    <td className="px-4 py-2 border border-gray-300 text-center">
+                      {locker.solenoids?.length || 0}
                     </td>
                     <td className="px-4 py-2 border border-gray-300 text-center">
                       <div className="flex justify-center space-x-2">
@@ -380,8 +409,8 @@ const LockerManagementPage: React.FC = () => {
         {/* PAGINATION */}
         <div className="mt-4 flex justify-center">
           <ReactPaginate
-            forcePage={currentPage}
-            pageCount={Math.ceil(filteredLockers.length / itemsPerPage)}
+            forcePage={Math.min(currentPage, pageCount - 1)}
+            pageCount={pageCount}
             onPageChange={(e: { selected: number }) => setCurrentPage(e.selected)}
             previousLabel="Trước"
             nextLabel="Tiếp"

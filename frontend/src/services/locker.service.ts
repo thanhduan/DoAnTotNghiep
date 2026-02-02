@@ -2,16 +2,46 @@ import api from './api.service';
 import { LockerEntity, LockerPayload } from '../types/locker.type';
 
 export const lockerService = {
-  getAll: async (): Promise<LockerEntity[]> => {
-    const res = await api.get('/lockers');
+  getAll: async (params?: Record<string, any>): Promise<LockerEntity[]> => {
+    const res = await api.get('/lockers', {
+      params: {
+        campusId: params?.campusId !== 'all' ? params?.campusId : undefined, // Skip 'all'
+        status: params?.status,
+        isActive: params?.isActive,
+        search: params?.search,
+      },
+    });
 
-    // vì interceptor → res chính là data
     if (res?.success && Array.isArray(res.data)) {
       return res.data;
     }
 
-    if (Array.isArray(res)) {
-      return res;
+    return [];
+  },
+
+  getAllWithIoT: async (): Promise<LockerEntity[]> => {
+    const res = await api.get('/lockers/iot');
+
+    if (res?.success && Array.isArray(res.data)) {
+      return res.data;
+    }
+
+    console.warn('[LockerService] Unexpected response format:', res);
+    return [];
+  },
+
+  findAllWithIoT: async (params?: Record<string, any>): Promise<LockerEntity[]> => {
+    const res = await api.get('/lockers/iot', {
+      params: {
+        campusId: params?.campusId,
+        status: params?.status,
+        isActive: params?.isActive,
+        search: params?.search,
+      },
+    });
+
+    if (res?.success && Array.isArray(res.data)) {
+      return res.data;
     }
 
     console.warn('[LockerService] Unexpected response format:', res);
@@ -45,5 +75,10 @@ export const lockerService = {
 
   remove: async (id: string): Promise<{ success: boolean }> => {
     return await api.delete(`/lockers/${id}`);
+  },
+
+  getIoTStatus: async (lockerId: string): Promise<any> => {
+    const res = await api.get(`/lockers/${lockerId}/iot-status`);
+    return res;
   },
 };
