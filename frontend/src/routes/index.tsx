@@ -184,4 +184,3 @@ const AppRoutes: React.FC = () => {
 };
 
 export default AppRoutes;
-
