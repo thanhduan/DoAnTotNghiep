@@ -67,6 +67,18 @@ class ApiService {
   public patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     return this.axiosInstance.patch(url, data, config);
   }
+
+  public reportHeartbeat(data: { deviceEsp32: string; solenoids: any[] }) {
+    return this.post('/esp32/heartbeat', data);
+  }
+
+  public sendCommand(data: { deviceEsp32: string; idSolenoid: string; action: string }) {
+    return this.post('/esp32/command', data);
+  }
+
+  public getIoTStatus(deviceEsp32: string) {
+    return this.get(`/iot/status/${deviceEsp32}`);
+  }
 }
 
 export const apiService = new ApiService();
