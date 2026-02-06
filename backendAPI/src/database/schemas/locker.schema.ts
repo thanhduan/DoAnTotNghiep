@@ -5,13 +5,16 @@ import { LockerStatus } from '@/common/enums';
 @Schema({ timestamps: true, collection: 'lockers' })
 export class Locker extends Document {
   @Prop({ required: true, unique: true })
-  lockerNumber: number;
+  lockerNumber: number; 
 
   @Prop({ required: true })
   position: string;
 
   @Prop({ default: null })
   deviceId?: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'ESP32', default: null })
+  esp32Id?: Types.ObjectId | null;
 
   @Prop({ type: Types.ObjectId, ref: 'Campus', default: null })
   campusId?: Types.ObjectId | null;
