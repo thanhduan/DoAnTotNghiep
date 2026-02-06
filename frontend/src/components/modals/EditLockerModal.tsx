@@ -8,7 +8,7 @@ interface Props {
   onClose: () => void;
   onEdit: (data: LockerPayload) => Promise<void>;
   locker?: LockerEntity;
-  campuses: { _id: string; campusName: string }[];
+  campuses: { _id: string; campusName: string }[]; // Ensure campuses is defined in Props
 }
 
 const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, campuses }) => {
@@ -37,28 +37,18 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
     const errs: { [key: string]: string } = {};
 
     // Validate lockerNumber
-    if (!form.lockerNumber || form.lockerNumber < 1) {
+    if (!form?.lockerNumber || form.lockerNumber < 1) {
       errs.lockerNumber = 'Số tủ phải lớn hơn 0';
     }
 
     // Validate position
-    if (!form.position.trim()) {
+    if (!form?.position || !form.position.trim()) {
       errs.position = 'Vị trí không được để trống';
     }
 
-    // Validate batteryLevel
-    if (form.batteryLevel === undefined || form.batteryLevel < 0 || form.batteryLevel > 100) {
-      errs.batteryLevel = 'Pin phải từ 0 đến 100';
-    }
-
     // Validate campusId
-    if (!form.campusId) {
+    if (!form?.campusId) {
       errs.campusId = 'Vui lòng chọn cơ sở';
-    }
-
-    // Validate deviceId
-    if (!form.deviceId || !form.deviceId.trim()) {
-      errs.deviceId = 'Mã thiết bị không được để trống';
     }
 
     setErrors(errs);
@@ -96,9 +86,6 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
       alert('Dữ liệu bị trùng lặp. Vui lòng kiểm tra lại.');
       return;
     }
-
-    await onEdit(payload);
-    onClose();
   };
 
   return (
@@ -108,13 +95,7 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
           Chỉnh Sửa Tủ Khóa
         </h2>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit();
-          }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Số Tủ
@@ -125,7 +106,6 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
               onChange={(e) => setForm({ ...form, lockerNumber: +e.target.value })}
               className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
             />
-            {errors.lockerNumber && <p className="text-red-500 text-sm">{errors.lockerNumber}</p>}
           </div>
 
           <div>
@@ -138,7 +118,6 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
               onChange={(e) => setForm({ ...form, position: e.target.value })}
               className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
             />
-            {errors.position && <p className="text-red-500 text-sm">{errors.position}</p>}
           </div>
 
           <div>
@@ -148,10 +127,9 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
             <input
               type="number"
               value={form.batteryLevel}
-              onChange={(e) => setForm({ ...form, batteryLevel: +e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+              readOnly
+              className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
-            {errors.batteryLevel && <p className="text-red-500 text-sm">{errors.batteryLevel}</p>}
           </div>
 
           <div>
@@ -159,9 +137,10 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
               Trạng Thái
             </label>
             <select
-              value={form.status}
+              value={form.status || 'available'}
               onChange={(e) => setForm({ ...form, status: e.target.value as LockerStatus })}
               className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+              disabled={!isAdmin} // Restrict editing based on admin level
             >
               <option value="available">Available</option>
               <option value="occupied">Occupied</option>
@@ -177,15 +156,15 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
               value={form.campusId || ''}
               onChange={(e) => setForm({ ...form, campusId: e.target.value || null })}
               className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+              disabled={!canRelocate} // Restrict editing based on relocation permissions
             >
               <option value="">Chưa gán cơ sở</option>
-              {campuses.map((campus) => (
+              {campuses?.map((campus: { _id: string; campusName: string }) => (
                 <option key={campus._id} value={campus._id}>
                   {campus.campusName}
                 </option>
               ))}
             </select>
-            {errors.campusId && <p className="text-red-500 text-sm">{errors.campusId}</p>}
           </div>
 
           <div>
@@ -194,11 +173,10 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
             </label>
             <input
               type="text"
-              value={form.deviceId || ''}
-              onChange={(e) => setForm({ ...form, deviceId: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+              value={form.deviceId || 'N/A'}
+              readOnly
+              className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
-            {errors.deviceId && <p className="text-red-500 text-sm">{errors.deviceId}</p>}
           </div>
 
           <div>
@@ -214,7 +192,29 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
               <option value="false">Không hoạt động</option>
             </select>
           </div>
-        </form>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Danh Sách Khóa Điện Tử
+            </label>
+            <div className="bg-gray-100 p-4 rounded-lg max-h-40 overflow-y-auto">
+              {locker?.solenoids && locker.solenoids.length > 0 ? (
+                <ul className="list-disc pl-5">
+                  {locker.solenoids.map((solenoid, index) => (
+                    <li key={index} className="text-gray-700">
+                      Solenoid {index + 1}: 
+                      <span className={solenoid.connected ? 'text-green-600' : 'text-red-600'}>
+                        {solenoid.connected ? ' Kết nối' : ' Mất kết nối'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">Không có khóa điện tử nào</p>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="flex justify-center gap-4 mt-6">
           <Button
@@ -227,7 +227,7 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
 
           <Button
             onClick={handleSubmit}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded shadow-md"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded shadow-md"
           >
             Lưu
           </Button>
@@ -238,3 +238,6 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
 };
 
 export default EditLockerModal;
+
+const isAdmin = true; // Replace with actual logic to determine admin level
+const canRelocate = true; // Replace with actual logic to determine relocation permissions
