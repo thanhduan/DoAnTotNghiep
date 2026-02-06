@@ -25,6 +25,8 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
         deviceId: locker.deviceId ?? '',
         isActive: locker.isActive,
         campusId: locker.campusId ?? null,
+        solenoids: locker.solenoids ?? [], // Ensure solenoids are included
+        esp32Id: locker.esp32Id ?? null, // Ensure esp32Id is included and matches updated type
       });
     }
   }, [locker]);
@@ -56,38 +58,33 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
   const handleSubmit = async () => {
     if (!validate()) return;
 
-    try {
-      // Check for duplicate lockers
-      const existingLockers: LockerEntity[] = await lockerService.getAll();
-      const foundDuplicates = existingLockers.filter(
-        (locker) =>
-          locker.id !== locker?.id && // Exclude the current locker being edited
-          (
-            locker.lockerNumber === form.lockerNumber ||
-            locker.position.toLowerCase() === form.position.toLowerCase() ||
-            locker.deviceId === form.deviceId
-          )
-      );
+    const payload: LockerPayload = {
+      lockerNumber: form.lockerNumber,
+      position: form.position,
+      status: form.status,
+      batteryLevel: form.batteryLevel,
+      deviceId: form.deviceId || '', // Ensure deviceId is always a string
+      isActive: form.isActive,
+      campusId: form.campusId,
+      solenoids: form.solenoids ?? [], // Ensure solenoids are included
+      esp32Id: form.esp32Id ?? null, // Ensure esp32Id is included and matches updated type
+    };
 
-      if (foundDuplicates.length > 0) {
-        alert('Dữ liệu bị trùng lặp. Vui lòng kiểm tra lại.');
-        return;
-      }
+    // Check for duplicates
+    const existingLockers: LockerEntity[] = await lockerService.getAll();
+    const foundDuplicates = existingLockers.filter(
+      (locker) =>
+        locker.id !== locker?.id && // Loại trừ chính bản ghi đang chỉnh sửa
+        (
+          locker.lockerNumber === form.lockerNumber ||
+          locker.position.toLowerCase() === form.position.toLowerCase() ||
+          locker.deviceId === form.deviceId // Thêm kiểm tra trùng mã thiết bị
+        )
+    );
 
-      const payload: LockerPayload = {
-        lockerNumber: form.lockerNumber,
-        position: form.position,
-        status: form.status as LockerStatus,
-        batteryLevel: form.batteryLevel,
-        deviceId: form.deviceId,
-        isActive: form.isActive,
-        campusId: form.campusId,
-      };
-
-      await onEdit(payload);
-      onClose();
-    } catch (error) {
-      console.error('Error during submission:', error);
+    if (foundDuplicates.length > 0) {
+      alert('Dữ liệu bị trùng lặp. Vui lòng kiểm tra lại.');
+      return;
     }
   };
 
