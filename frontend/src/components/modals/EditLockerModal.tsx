@@ -25,6 +25,8 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
         deviceId: locker.deviceId ?? '',
         isActive: locker.isActive,
         campusId: locker.campusId ?? null,
+        solenoids: locker.solenoids ?? [], // Ensure solenoids are included
+        esp32Id: locker.esp32Id ?? null, // Ensure esp32Id is included and matches updated type
       });
     }
   }, [locker]);
@@ -71,9 +73,11 @@ const EditLockerModal: React.FC<Props> = ({ isOpen, onClose, onEdit, locker, cam
       position: form.position,
       status: form.status,
       batteryLevel: form.batteryLevel,
-      deviceId: form.deviceId || null,
+      deviceId: form.deviceId || '', // Ensure deviceId is always a string
       isActive: form.isActive,
       campusId: form.campusId,
+      solenoids: form.solenoids ?? [], // Ensure solenoids are included
+      esp32Id: form.esp32Id ?? null, // Ensure esp32Id is included and matches updated type
     };
 
     // Check for duplicates

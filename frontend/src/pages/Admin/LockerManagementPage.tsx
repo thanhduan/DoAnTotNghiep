@@ -31,7 +31,7 @@ const LockerManagementPage: React.FC = () => {
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 5;
+  const itemsPerPage = 4;
 
   const [campusFilter, setCampusFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -53,9 +53,15 @@ const LockerManagementPage: React.FC = () => {
       console.log('Locker API Response:', lockerRes);
       console.log('Campus API Response:', campusRes);
 
-      // Map _id -> id
+      const campusMap = new Map(campusRes.map((campus) => [campus._id, campus.campusName]));
+
       const lockersWithId = Array.isArray(lockerRes)
-        ? lockerRes.map((l) => ({ ...l, id: l._id ?? l.id }))
+        ? lockerRes.map((l: any) => ({
+            ...l,
+            id: l._id ?? l.id,
+            campusName: campusMap.get(l.campusId) || '', // Map campusName using campusId
+            solenoids: Array.isArray(l.solenoids) ? l.solenoids : [], // Normalize solenoids
+          }))
         : [];
       setLockers(lockersWithId);
 
@@ -114,11 +120,7 @@ const LockerManagementPage: React.FC = () => {
   // =========================
   const handleCreate = async (data: LockerPayload) => {
     try {
-      const newLocker = await lockerService.create(data);
-
-      console.log('[Create] locker:', newLocker);
-
-      setLockers((prev) => [...prev, newLocker]);
+      await lockerService.create(data);
 
       toast.success('Tạo tủ thành công!', {
         position: 'top-right',
@@ -128,9 +130,17 @@ const LockerManagementPage: React.FC = () => {
       });
 
       setIsCreateOpen(false);
+
+      // Fetch the updated data to ensure consistency
+      await fetchData();
     } catch (error) {
       console.error('Create error:', error);
-      toast.error('Tạo tủ thất bại.');
+      toast.error('Tạo tủ thất bại.', {
+        position: 'top-right',
+        autoClose: 3000,
+        hideProgressBar: true,
+        transition: Slide,
+      });
     }
   };
 
@@ -410,6 +420,7 @@ const LockerManagementPage: React.FC = () => {
           });
         }}
         campuses={campuses}
+        setLockers={setLockers} // Pass setLockers to CreateLockerModal
       />
       <EditLockerModal
         isOpen={isEditOpen}

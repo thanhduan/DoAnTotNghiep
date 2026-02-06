@@ -46,4 +46,54 @@ export const lockerService = {
   remove: async (id: string): Promise<{ success: boolean }> => {
     return await api.delete(`/lockers/${id}`);
   },
+
+  getIoTStatus: async (lockerId: string): Promise<any> => {
+    const res = await api.get(`/lockers/${lockerId}/iot-status`);
+    return res;
+  },
+
+  getEsp32Devices: async (): Promise<{
+    id: string;
+    name: string;
+    lockCount: number;
+    status: string;
+    solenoids: { id: string; connected: boolean }[];
+    deviceId: string;
+  }[]> => {
+    try {
+      const res = await api.get('/esp32');
+
+      // Handle both unwrapped and wrapped responses
+      const devices = Array.isArray(res) ? res : res?.data;
+
+      if (!Array.isArray(devices)) {
+        console.warn('[LockerService] Unexpected ESP32 response:', res);
+        return [];
+      }
+
+      return devices
+        .map((device: any) => ({
+          id: device._id,
+          name: device.deviceId || 'Unnamed Device',
+          deviceId: device.deviceId,
+          status: device.status ?? 'UNKNOWN',
+          lockCount: device.solenoids?.length ?? 0,
+          solenoids: (device.solenoids ?? []).map((s: any) => ({
+            id: s.id || s._id,
+            connected: !!s.connected,
+          })),
+        }))
+        .sort((a, b) => {
+          const aValue = isNaN(Number(a.deviceId)) ? a.deviceId : Number(a.deviceId);
+          const bValue = isNaN(Number(b.deviceId)) ? b.deviceId : Number(b.deviceId);
+
+          if (aValue < bValue) return -1;
+          if (aValue > bValue) return 1;
+          return 0;
+        });
+    } catch (err) {
+      console.error('[LockerService] Failed to fetch ESP32 devices:', err);
+      return [];
+    }
+  },
 };
