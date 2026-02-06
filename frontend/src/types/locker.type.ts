@@ -14,16 +14,19 @@ export interface LockerEntity {
   lastConnection: string | null;
   createdAt: string;
   updatedAt: string;
+  esp32Id: string | null; // Updated to ensure compatibility with EditLockerModal
   solenoids?: { id: string; connected: boolean }[]; // Added solenoids property inline
 }
 
 export interface LockerPayload {
-  lockerNumber: number;
+  lockerNumber: number; // Ensure lockerNumber is a number
   position: string;
-  deviceId?: string | null;
-  campusId?: string | null;
-  status?: LockerStatus;
-  batteryLevel?: number;
-  isActive?: boolean;
-  lastConnection?: string | null;
+  batteryLevel: number;
+  status: LockerStatus;
+  deviceId: string;
+  isActive: boolean;
+  campusId: string | null;
+  solenoids: { id: string; connected: boolean }[];
+  esp32Id?: string | null; // Updated to allow null values for compatibility
+  lastConnection?: string; // Re-added lastConnection to match existing service logic
 }
