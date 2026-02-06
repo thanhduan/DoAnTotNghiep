@@ -36,7 +36,7 @@ const LockerManagementPage: React.FC = () => {
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 5;
+  const itemsPerPage = 4;
 
   const [campusFilter, setCampusFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -165,7 +165,6 @@ const LockerManagementPage: React.FC = () => {
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
-        transition: Slide,
       });
       return;
     }
@@ -174,13 +173,23 @@ const LockerManagementPage: React.FC = () => {
       if (!updatedLocker || !updatedLocker.id) {
         throw new Error('Invalid response from server');
       }
+
+      // Ensure solenoids are preserved
+      const updatedLockerWithSolenoids = {
+        ...updatedLocker,
+        solenoids: selectedLocker.solenoids, // Retain solenoids from the original locker
+      };
+
       setLockers((prevLockers) =>
         prevLockers.map((locker) =>
-          locker.id === updatedLocker.id ? updatedLocker : locker
+          locker.id === updatedLocker.id ? updatedLockerWithSolenoids : locker
         )
       );
+
       setIsEditOpen(false);
       setSelectedLocker(null);
+
+      // Display success toast
       toast.success('Cập nhật thành công!', {
         position: 'top-right',
         autoClose: 3000,
@@ -188,7 +197,6 @@ const LockerManagementPage: React.FC = () => {
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
-        transition: Slide,
       });
     } catch (error) {
       console.error('Update error:', error);
@@ -199,7 +207,6 @@ const LockerManagementPage: React.FC = () => {
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
-        transition: Slide,
       });
     }
   };
@@ -338,70 +345,62 @@ const LockerManagementPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedLockers.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-2 text-gray-500 text-center">
-                    Không có dữ liệu
+              {paginatedLockers.map((locker, index) => (
+                <tr key={locker.id || index} className="hover:bg-gray-50">
+                  <td className="px-4 py-2 border border-gray-300 text-center font-bold">
+                    {currentPage * itemsPerPage + index + 1}
+                  </td>
+                  <td className="px-4 py-2 border border-gray-300 text-center text-blue-600">
+                    {locker.lockerNumber}
+                  </td>
+                  <td className="px-4 py-2 border border-gray-300 text-left">
+                    {locker.position}
+                  </td>
+                  <td className="px-4 py-2 border border-gray-300 text-left">
+                    {locker.campusName}
+                  </td>
+                  <td className={`px-4 py-2 border border-gray-300 text-center ${getStatusColor(locker.status)}`}>
+                    {capitalize(locker.status)}
+                  </td>
+                  <td className={`px-4 py-2 border border-gray-300 text-center ${getBatteryColor(locker.batteryLevel)}`}>
+                    {locker.batteryLevel}%
+                  </td>
+                  <td className="px-4 py-2 border border-gray-300 text-center">
+                    <span className={`px-2 py-1 rounded-lg text-white ${locker.isActive ? 'bg-green-500' : 'bg-red-500'}`}> 
+                      {locker.isActive ? 'Hoạt Động' : 'Không Hoạt Động'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 border border-gray-300 text-center">
+                    {locker.solenoids?.length || 0}
+                  </td>
+                  <td className="px-4 py-2 border border-gray-300 text-center">
+                    <div className="flex justify-center space-x-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedLocker(locker);
+                          setIsViewOpen(true);
+                        }}
+                      >
+                        Xem
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setSelectedLocker(locker);
+                          setIsEditOpen(true);
+                        }}
+                      >
+                        Sửa
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(locker.id, locker.lockerNumber)}>
+                        Xóa
+                      </Button>
+                    </div>
                   </td>
                 </tr>
-              ) : (
-                paginatedLockers.map((locker, index) => (
-                  <tr key={locker.id || index} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 border border-gray-300 text-center font-bold">
-                      {currentPage * itemsPerPage + index + 1}
-                    </td>
-                    <td className="px-4 py-2 border border-gray-300 text-center text-blue-600">
-                      {locker.lockerNumber}
-                    </td>
-                    <td className="px-4 py-2 border border-gray-300 text-left">
-                      {locker.position}
-                    </td>
-                    <td className="px-4 py-2 border border-gray-300 text-left">
-                      {locker.campusName}
-                    </td>
-                    <td className={`px-4 py-2 border border-gray-300 text-center ${getStatusColor(locker.status)}`}>
-                      {capitalize(locker.status)}
-                    </td>
-                    <td className={`px-4 py-2 border border-gray-300 text-center ${getBatteryColor(locker.batteryLevel)}`}>
-                      {locker.batteryLevel}%
-                    </td>
-                    <td className="px-4 py-2 border border-gray-300 text-center">
-                      <span className={`px-2 py-1 rounded-lg text-white ${locker.isActive ? 'bg-green-500' : 'bg-red-500'}`}>
-                        {locker.isActive ? 'Hoạt Động' : 'Không Hoạt Động'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 border border-gray-300 text-center">
-                      {locker.solenoids?.length || 0}
-                    </td>
-                    <td className="px-4 py-2 border border-gray-300 text-center">
-                      <div className="flex justify-center space-x-2">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedLocker(locker);
-                            setIsViewOpen(true);
-                          }}
-                        >
-                          Xem
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            setSelectedLocker(locker);
-                            setIsEditOpen(true);
-                          }}
-                        >
-                          Sửa
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(locker.id, locker.lockerNumber)}>
-                          Xóa
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
@@ -445,7 +444,7 @@ const LockerManagementPage: React.FC = () => {
         onClose={() => setIsEditOpen(false)}
         onEdit={handleEdit}
         locker={selectedLocker ?? undefined}
-        campuses={campuses}
+        campuses={campuses} // Ensure campuses is passed correctly
       />
       <ViewLockerModal
         isOpen={isViewOpen}
