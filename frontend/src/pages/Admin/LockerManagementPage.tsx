@@ -13,6 +13,7 @@ import { campusService } from '../../services/campus.service';
 import CreateLockerModal from '../../components/modals/CreateLockerModal';
 import EditLockerModal from '../../components/modals/EditLockerModal';
 import ViewLockerModal from '../../components/modals/ViewLockerModal';
+import ConfirmDeleteLockerModal from '../../components/modals/ConfirmDeleteLockerModal';
 import { LockerPayload, LockerEntity } from '../../types/locker.type';
 
 type Campus = {
@@ -29,6 +30,8 @@ const LockerManagementPage: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [lockerToDelete, setLockerToDelete] = useState<{ id: string; lockerNumber: number } | null>(null);
 
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 5;
@@ -183,9 +186,24 @@ const LockerManagementPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string, lockerNumber: number) => {
-    if (!window.confirm(`Bạn có thật sự muốn xóa tủ số ${lockerNumber}?`)) return;
+  const handleDelete = (id: string, lockerNumber: number) => {
+    openDeleteModal(id, lockerNumber);
+  };
 
+  const openDeleteModal = (id: string, lockerNumber: number) => {
+    setLockerToDelete({ id, lockerNumber });
+    setDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setLockerToDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!lockerToDelete) return;
+
+    const { id, lockerNumber } = lockerToDelete;
     try {
       await lockerService.remove(id);
       toast.success(`Xóa tủ số ${lockerNumber} thành công!`, {
@@ -209,6 +227,8 @@ const LockerManagementPage: React.FC = () => {
         draggable: true,
         transition: Slide,
       });
+    } finally {
+      closeDeleteModal();
     }
   };
 
@@ -426,6 +446,12 @@ const LockerManagementPage: React.FC = () => {
           setIsEditOpen(true);
         }}
         locker={selectedLocker ?? undefined}
+      />
+      <ConfirmDeleteLockerModal
+        isOpen={isDeleteModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDelete}
+        lockerNumber={lockerToDelete?.lockerNumber || 0}
       />
     </div>
   );
