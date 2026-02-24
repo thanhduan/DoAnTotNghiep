@@ -14,6 +14,7 @@ export interface LockerEntity {
   lastConnection: string | null;
   createdAt: string;
   updatedAt: string;
+  solenoids?: { id: string; connected: boolean }[]; // Added solenoids property inline
 }
 
 export interface LockerPayload {
