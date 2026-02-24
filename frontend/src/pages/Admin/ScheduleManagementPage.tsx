@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Upload, Search, CalendarIcon, X, AlertCircle
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import Card from '../../components/common/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import Loading from '../../components/common/Loading';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -45,9 +45,8 @@ const ScheduleManagementPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   
   // Filters
-  const [buildingFilter, setBuildingFilter] = useState<string>('all');
   const [roomSearch, setRoomSearch] = useState<string>('');
-  const [slotTypeFilter, setSlotTypeFilter] = useState<'OLDSLOT' | 'NEWSLOT' | 'all'>('OLDSLOT');
+  const [slotTypeFilter, setSlotTypeFilter] = useState<'OLDSLOT' | 'NEWSLOT'>('NEWSLOT');
   
   // Modals
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
@@ -108,14 +107,12 @@ const ScheduleManagementPage: React.FC = () => {
 
   const fetchSchedules = async () => {
     try {
-      const startDate = new Date(currentDate);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(currentDate);
-      endDate.setHours(23, 59, 59, 999);
+      // Gửi ngày dạng YYYY-MM-DD để tránh lệch múi giờ khi BE parse Date
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
 
       const params: QueryScheduleParams = {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        startDate: dateStr,
+        endDate: dateStr,
       };
 
       const schedulesData = await scheduleService.getAll(params);
@@ -129,19 +126,16 @@ const ScheduleManagementPage: React.FC = () => {
   // Filter rooms
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) => {
-      const matchesBuilding = buildingFilter === 'all' || room.building === buildingFilter;
-      const matchesSearch = 
+      const matchesSearch =
         roomSearch === '' ||
         room.roomCode.toLowerCase().includes(roomSearch.toLowerCase()) ||
         room.roomName.toLowerCase().includes(roomSearch.toLowerCase());
-      return matchesBuilding && matchesSearch;
+      return matchesSearch;
     });
-  }, [rooms, buildingFilter, roomSearch]);
+  }, [rooms, roomSearch]);
 
   const filteredTimeSlots = useMemo(() => {
-    return timeSlots.filter((slot) => {
-      return slotTypeFilter === 'all' || slot.slotType === slotTypeFilter;
-    }).sort((a, b) => {
+    return timeSlots.filter((slot) => slot.slotType === slotTypeFilter).sort((a, b) => {
       if (a.slotType !== b.slotType) {
         return a.slotType === 'OLDSLOT' ? -1 : 1;
       }
@@ -149,37 +143,38 @@ const ScheduleManagementPage: React.FC = () => {
     });
   }, [timeSlots, slotTypeFilter]);
 
-  const buildings = useMemo(() => {
-    return Array.from(new Set(rooms.map((r) => r.building))).sort();
-  }, [rooms]);
-
   const scheduleMap = useMemo(() => {
     const map = new Map<string, Schedule>();
-    
+
     schedules.forEach((schedule) => {
-      const roomId = typeof schedule.roomId === 'string' ? schedule.roomId : schedule.roomId._id;
+      const roomId = typeof schedule.roomId === 'string' ? schedule.roomId : schedule.roomId?._id;
+      const slotNumber = schedule.slotNumber;
+
+      // Skip malformed schedules that lack required identifiers to avoid runtime errors
+      if (!roomId || slotNumber === undefined || schedule.slotType === undefined) return;
+
       const scheduleDate = new Date(schedule.dateStart);
-      const dateStr = scheduleDate.toISOString().split('T')[0];
-      
-      const key = `${roomId}_${dateStr}_${schedule.slotNumber}_${schedule.slotType}`;
+      const dateStr = format(scheduleDate, 'yyyy-MM-dd');
+
+      const key = `${roomId}_${dateStr}_${slotNumber}_${schedule.slotType}`;
       map.set(key, schedule);
     });
-    
+
     return map;
   }, [schedules]);
 
   const scheduleGrid = useMemo(() => {
     const grid: ScheduleCell[][] = [];
-    const currentDateStr = currentDate.toISOString().split('T')[0];
-    
+    const currentDateStr = format(currentDate, 'yyyy-MM-dd');
+
     filteredRooms.forEach((room) => {
       const row: ScheduleCell[] = [];
       const roomId = room._id;
-      
+
       filteredTimeSlots.forEach((slot) => {
         const key = `${roomId}_${currentDateStr}_${slot.slotNumber}_${slot.slotType}`;
         const schedule = scheduleMap.get(key) || null;
-        
+
         row.push({
           schedule,
           roomId,
@@ -189,7 +184,7 @@ const ScheduleManagementPage: React.FC = () => {
       });
       grid.push(row);
     });
-    
+
     return grid;
   }, [filteredRooms, filteredTimeSlots, scheduleMap, currentDate]);
 
@@ -224,6 +219,13 @@ const ScheduleManagementPage: React.FC = () => {
     const validExtensions = ['.csv', '.xlsx', '.xls'];
     const fileName = file.name.toLowerCase();
     const isValid = validExtensions.some(ext => fileName.endsWith(ext));
+
+    const MAX_SIZE_MB = 5;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      toast.error(`File vượt quá ${MAX_SIZE_MB}MB`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     if (!isValid) {
       toast.error('Chỉ chấp nhận file CSV hoặc Excel (.csv, .xlsx, .xls)');
@@ -328,11 +330,11 @@ const ScheduleManagementPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Import error:', error);
-      
-      const errorData = error;
+
+      const errorData = error?.response?.data || error;
       
       const errorErrors = errorData?.errors ? normalizeErrors(errorData.errors) : 
-                         [{ row: 0, message: typeof error?.message === 'string' ? error.message : 'Import thất bại' }];
+             [{ row: 0, message: typeof errorData?.message === 'string' ? errorData.message : 'Import thất bại' }];
       
       const total = errorData?.total ?? errorData?.summary?.total ?? (errorErrors.length > 0 ? errorErrors.length : 0);
       const inserted = errorData?.inserted ?? errorData?.summary?.inserted ?? 0;
@@ -379,8 +381,8 @@ const ScheduleManagementPage: React.FC = () => {
 
   // Get schedule display info
   const getScheduleInfo = (schedule: Schedule) => {
-    const room = typeof schedule.roomId === 'object' ? schedule.roomId : null;
-    const lecturer = typeof schedule.lecturerId === 'object' ? schedule.lecturerId : null;
+    const room = typeof schedule.roomId === 'object' && schedule.roomId !== null ? schedule.roomId : null;
+    const lecturer = typeof schedule.lecturerId === 'object' && schedule.lecturerId !== null ? schedule.lecturerId : null;
     
     return {
       classCode: schedule.classCode || 'N/A',
@@ -395,11 +397,16 @@ const ScheduleManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-semibold">Quản lý Lịch học</h1>
-        <div className="flex gap-2">
-          <PermissionGuard permissions={[PERMISSIONS.SCHEDULES_CREATE]}>
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Quản lý Lịch học</h1>
+          <p className="text-muted-foreground mt-2">
+            Tìm kiếm, lọc và theo dõi lịch học theo phòng và tiết trong ngày
+          </p>
+        </div>
+        <PermissionGuard permissions={[PERMISSIONS.SCHEDULES_CREATE]}>
+          <div className="flex items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -407,140 +414,89 @@ const ScheduleManagementPage: React.FC = () => {
               onChange={handleImport}
               className="hidden"
             />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isImporting}
-            >
+            <Button onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
               <Upload className="h-4 w-4 mr-2" />
               {isImporting ? 'Đang import...' : 'Import Excel/CSV'}
             </Button>
-          </PermissionGuard>
-        </div>
-      </div>
-
-      {/* Date Navigation */}
-      <Card>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={handlePrevDay}
-              aria-label="Ngày trước"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <div className="flex flex-col items-center min-w-[240px]">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(currentDate, "PPP", { locale: vi })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={currentDate}
-                    onSelect={(date) => date && setCurrentDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              
-              <span className="text-sm text-muted-foreground mt-1">
-                {format(currentDate, "EEEE", { locale: vi })}
-              </span>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={handleNextDay}
-              aria-label="Ngày sau"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setCurrentDate(new Date())}
-            >
-              Hôm nay
-            </Button>
           </div>
-        </div>
-      </Card>
+        </PermissionGuard>
+      </div>
 
       {/* Filters */}
       <Card>
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Tìm kiếm phòng học..."
-                value={roomSearch}
-                onChange={(e) => setRoomSearch(e.target.value)}
-                className="pl-10"
-              />
+        <CardHeader>
+          <CardTitle>Bộ lọc</CardTitle>
+          <CardDescription>Tìm kiếm và lọc lịch học</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
+              <div className="flex items-center gap-2 mb-2 lg:mb-0">
+                <Button variant="outline" size="icon" onClick={handlePrevDay} aria-label="Ngày trước">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-start text-left font-normal min-w-[220px]">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(currentDate, 'PPP', { locale: vi })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={currentDate}
+                      onSelect={(date) => date && setCurrentDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Button variant="outline" size="icon" onClick={handleNextDay} aria-label="Ngày sau">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())}>
+                  Hôm nay
+                </Button>
+              </div>
+              <div className="text-sm text-muted-foreground">{format(currentDate, 'EEEE', { locale: vi })}</div>
             </div>
-            
-            <Select value={buildingFilter} onValueChange={setBuildingFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Tòa nhà" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả tòa nhà</SelectItem>
-                {buildings.map((building) => (
-                  <SelectItem key={building} value={building}>
-                    Tòa {building}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={slotTypeFilter} onValueChange={(value) => setSlotTypeFilter(value as any)}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Loại tiết" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả loại tiết</SelectItem>
-                <SelectItem value="OLDSLOT">Tiết cũ (1.5h)</SelectItem>
-                <SelectItem value="NEWSLOT">Tiết mới (2.25h)</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
-          
-          {/* Filter Badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {buildingFilter !== 'all' && (
-              <Badge variant="secondary" className="gap-1">
-                Tòa {buildingFilter}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
-                  onClick={() => setBuildingFilter('all')}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="room-search">Tìm kiếm</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="room-search"
+                  type="text"
+                  placeholder="Mã phòng, tên phòng..."
+                  value={roomSearch}
+                  onChange={(e) => setRoomSearch(e.target.value)}
+                  className="pl-9"
                 />
-              </Badge>
-            )}
-            
-            {slotTypeFilter !== 'all' && (
-              <Badge variant="secondary" className="gap-1">
-                {slotTypeFilter === 'OLDSLOT' ? 'Tiết cũ' : 'Tiết mới'}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
-                  onClick={() => setSlotTypeFilter('all')}
-                />
-              </Badge>
-            )}
-            
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Loại tiết</Label>
+              <Select value={slotTypeFilter} onValueChange={(value: 'OLDSLOT' | 'NEWSLOT') => setSlotTypeFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn loại tiết" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OLDSLOT">Old slot (1.5h)</SelectItem>
+                  <SelectItem value="NEWSLOT">New slot (2.25h)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="gap-1">
+              {slotTypeFilter === 'OLDSLOT' ? 'Tiết cũ' : 'Tiết mới'}
+            </Badge>
+
             {roomSearch && (
               <Badge variant="secondary" className="gap-1">
                 Tìm: "{roomSearch}"
@@ -550,14 +506,13 @@ const ScheduleManagementPage: React.FC = () => {
                 />
               </Badge>
             )}
-            
-            {(buildingFilter !== 'all' || slotTypeFilter !== 'all' || roomSearch) && (
+
+            {(roomSearch || slotTypeFilter !== 'NEWSLOT') && (
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => {
-                  setBuildingFilter('all');
-                  setSlotTypeFilter('all');
+                  setSlotTypeFilter('NEWSLOT');
                   setRoomSearch('');
                 }}
               >
@@ -565,12 +520,16 @@ const ScheduleManagementPage: React.FC = () => {
               </Button>
             )}
           </div>
-        </div>
+        </CardContent>
       </Card>
 
       {/* Schedule Grid Table - Desktop */}
       <Card>
-        <div className="overflow-x-auto">
+        <CardHeader>
+          <CardTitle>Lịch học</CardTitle>
+          <CardDescription>Hiển thị lịch theo từng phòng và tiết trong ngày đã chọn</CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
           <div className="inline-block min-w-full">
             <table className="w-full border-collapse">
               <thead>
@@ -626,9 +585,8 @@ const ScheduleManagementPage: React.FC = () => {
                           variant="outline" 
                           size="sm"
                           onClick={() => {
-                            setBuildingFilter('all');
                             setRoomSearch('');
-                            setSlotTypeFilter('all');
+                            setSlotTypeFilter('NEWSLOT');
                           }}
                         >
                           Xóa bộ lọc
@@ -711,7 +669,7 @@ const ScheduleManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </CardContent>
       </Card>
 
       {/* Mobile Accordion View - Hidden on desktop */}
@@ -733,8 +691,8 @@ const ScheduleManagementPage: React.FC = () => {
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    setBuildingFilter('all');
                     setRoomSearch('');
+                    setSlotTypeFilter('NEWSLOT');
                   }}
                 >
                   Xóa bộ lọc
@@ -984,12 +942,6 @@ const ScheduleManagementPage: React.FC = () => {
               </div>
             )}
           </div>
-          
-          <DialogFooter>
-            <Button onClick={() => setShowImportResultDialog(false)}>
-              Đóng
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
