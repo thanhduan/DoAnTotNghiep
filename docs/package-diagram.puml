@@ -1,0 +1,432 @@
+@startuml Package_Diagram
+
+title Package Diagram - Hệ Thống Quản Lý Tủ Khoá Thông Minh
+
+skinparam packageStyle rectangle
+skinparam package {
+  BackgroundColor<<FE>> #EAF4FF
+  BackgroundColor<<BE>> #FFF4EA
+  BackgroundColor<<DB>> #EAFFEA
+  BackgroundColor<<Shared>> #F5F0FF
+  BorderColor<<FE>> #1A73E8
+  BorderColor<<BE>> #E8611A
+  BorderColor<<DB>> #2E8B57
+  BorderColor<<Shared>> #7B68EE
+  FontStyle bold
+}
+skinparam arrow {
+  Color #555555
+}
+skinparam defaultFontName Arial
+skinparam padding 6
+skinparam ranksep 40
+skinparam nodesep 30
+
+' ======================================================
+'  FRONTEND  (React + TypeScript)
+' ======================================================
+package "FrontEnd\n(React + TypeScript)" <<FE>> {
+
+  package "Entry Point" <<FE>> {
+    [index.tsx]
+    [App.tsx]
+  }
+
+  package "routes" <<FE>> {
+    [AppRouter]
+  }
+
+  package "context" <<FE>> {
+    [AuthContext]
+  }
+
+  package "hooks" <<FE>> {
+    [usePermission]
+    [useWebSocket]
+    [use-toast]
+  }
+
+  package "layouts" <<FE>> {
+    [AdminLayout]
+  }
+
+  package "pages" <<FE>> {
+    [LoginPage]
+    [HomePage]
+    [AuthCallbackPage]
+
+    package "Admin Pages" <<FE>> {
+      [DashboardPage]
+      [UserManagementPage]
+      [RoomManagementPage]
+      [LockerManagementPage]
+      [ScheduleManagementPage]
+      [DeviceManagementPage]
+      [RoleManagementPage]
+      [AuditLogPage]
+      [UserProfilePage]
+    }
+  }
+
+  package "components" <<FE>> {
+    package "common" <<FE>> {
+      [Avatar]
+      [Button]
+      [Card]
+      [ConfirmDialog]
+      [Loading]
+    }
+
+    package "modals" <<FE>> {
+      [CreateLockerModal]
+      [EditLockerModal]
+      [ViewLockerModal]
+      [CreateRoomModal]
+      [EditRoomModal]
+      [ViewRoomModal]
+      [CreateScheduleModal]
+      [EditScheduleModal]
+      [ViewScheduleModal]
+      [CreateRoleModal]
+    }
+
+    package "ui (shadcn)" <<FE>> {
+      [Button (ui)]
+      [Table]
+      [Dialog]
+      [Form]
+      [Select]
+      [Input]
+      [Badge]
+      [Toast / Toaster]
+      [Sidebar]
+      [Calendar]
+      [... other UI]
+    }
+
+    [PermissionGuard]
+    [ProtectedRoute]
+    [LockerIoTStatus]
+  }
+
+  package "services" <<FE>> {
+    [api.service]
+    [auth.service]
+    [user.service]
+    [campus.service]
+    [device.service]
+    [locker.service]
+    [room.service]
+    [schedule.service]
+    [role.service]
+    [time-slot.service]
+    [audit-log.service]
+    [websocket.service]
+  }
+
+  package "types" <<FE>> {
+    [api.types]
+    [auth.types]
+    [user.types]
+    [room.types]
+    [locker.type]
+    [schedule.types]
+    [device.types]
+    [role.types]
+    [time-slot.types]
+    [models.types]
+  }
+
+  package "constants" <<FE>> {
+    [roles.constants]
+  }
+
+  package "utils" <<FE>> {
+    [date.utils]
+    [helpers]
+    [permissions.utils]
+  }
+
+  package "lib" <<FE>> {
+    [utils (cn)]
+  }
+}
+
+' ======================================================
+'  BACKEND  (NestJS)
+' ======================================================
+package "BackEnd\n(NestJS + TypeScript)" <<BE>> {
+
+  package "main" <<BE>> {
+    [main.ts]
+    [AppModule]
+    [AppController]
+    [AppService]
+  }
+
+  package "config" <<BE>> {
+    [app.config]
+    [configuration]
+  }
+
+  package "database" <<BE>> {
+    [DatabaseModule]
+
+    package "schemas" <<DB>> {
+      [UserSchema]
+      [RoleSchema]
+      [PermissionSchema]
+      [RolePermissionSchema]
+      [CampusSchema]
+      [RoomSchema]
+      [LockerSchema]
+      [ScheduleSchema]
+      [TimeSlotSchema]
+      [DeviceSchema]
+      [Esp32Schema]
+    }
+  }
+
+  package "common" <<BE>> {
+    package "decorators" <<BE>> {
+      [CurrentUser]
+      [Permissions]
+      [Roles]
+    }
+
+    package "guards (common)" <<BE>> {
+      [JwtAuthGuard / RolesGuard]
+      [PermissionsGuard]
+      [CampusScopeGuard]
+    }
+
+    package "interceptors" <<BE>> {
+      [AuditLogInterceptor]
+      [LoggingInterceptor]
+      [TransformInterceptor]
+    }
+
+    package "filters" <<BE>> {
+      [HttpExceptionFilter]
+    }
+
+    package "gateways" <<BE>> {
+      [EventsGateway]
+      [GatewaysModule]
+    }
+
+    package "dto (common)" <<BE>> {
+      [ResponseDto]
+    }
+
+    package "enums" <<BE>> {
+      [CommonEnums]
+    }
+
+    package "interfaces" <<BE>> {
+      [AuthInterface]
+    }
+  }
+
+  package "modules" <<BE>> {
+
+    package "auth" <<BE>> {
+      [AuthController]
+      [AuthService]
+      [AuthModule]
+
+      package "auth/dto" <<BE>> {
+        [GoogleLoginDto]
+        [GoogleCallbackDto]
+        [AuthResponseDto]
+      }
+
+      package "auth/strategies" <<BE>> {
+        [JwtStrategy]
+        [GoogleStrategy]
+      }
+
+      package "auth/guards" <<BE>> {
+        [GoogleAuthGuard]
+        [JwtGuard]
+      }
+    }
+
+    package "users" <<BE>> {
+      [UsersController]
+      [UsersService]
+      [UsersModule]
+      package "users/dto" <<BE>> {
+        [CreateUserDto]
+        [UpdateUserDto]
+      }
+    }
+
+    package "campus" <<BE>> {
+      [CampusController]
+      [CampusService]
+      [CampusModule]
+    }
+
+    package "room" <<BE>> {
+      [RoomController]
+      [RoomService]
+      [RoomModule]
+      package "room/dto" <<BE>> {
+        [CreateRoomDto]
+        [UpdateRoomDto]
+      }
+    }
+
+    package "locker" <<BE>> {
+      [LockerController]
+      [LockerService]
+      [LockerModule]
+      package "locker/dto" <<BE>> {
+        [CreateLockerDto]
+        [UpdateLockerDto]
+      }
+    }
+
+    package "schedule" <<BE>> {
+      [ScheduleController]
+      [ScheduleService]
+      [ScheduleModule]
+      package "schedule/dto" <<BE>> {
+        [CreateScheduleDto]
+        [UpdateScheduleDto]
+      }
+      package "schedule/helpers" <<BE>> {
+        [ScheduleHelpers]
+      }
+    }
+
+    package "time-slots" <<BE>> {
+      [TimeSlotsController]
+      [TimeSlotsService]
+      [TimeSlotsModule]
+    }
+
+    package "device" <<BE>> {
+      [DeviceController]
+      [DeviceService]
+      [DeviceModule]
+      package "device/dto" <<BE>> {
+        [CreateDeviceDto]
+        [UpdateDeviceDto]
+      }
+    }
+
+    package "roles" <<BE>> {
+      [RolesController]
+      [RolesService]
+      [RolesModule]
+      package "roles/dto" <<BE>> {
+        [CreateRoleDto]
+        [UpdateRoleDto]
+      }
+    }
+
+    package "audit-logs" <<BE>> {
+      [AuditLogsController]
+      [AuditLogsService]
+      [AuditLogsModule]
+    }
+  }
+}
+
+' ======================================================
+'  RELATIONSHIPS
+' ======================================================
+
+' --- Entry point wiring ---
+[index.tsx]          --> [App.tsx]
+[App.tsx]            --> [AppRouter]
+[AppRouter]          --> [ProtectedRoute]
+[AppRouter]          --> [LoginPage]
+[AppRouter]          --> [HomePage]
+[AppRouter]          --> [AuthCallbackPage]
+[ProtectedRoute]     --> [AdminLayout]
+[AdminLayout]        --> [Admin Pages]
+[PermissionGuard]    --> [ProtectedRoute]
+
+' --- Pages use components & modals ---
+[Admin Pages]        --> [common]
+[Admin Pages]        --> [modals]
+[Admin Pages]        --> [ui (shadcn)]
+
+' --- Pages use services ---
+[Admin Pages]        --> [services]
+[LoginPage]          --> [auth.service]
+[AuthCallbackPage]   --> [auth.service]
+
+' --- Services depend on types ---
+[services]           --> [types]
+
+' --- Context / hooks ---
+[App.tsx]            --> [AuthContext]
+[Admin Pages]        --> [usePermission]
+[Admin Pages]        --> [use-toast]
+[LockerIoTStatus]    --> [useWebSocket]
+[useWebSocket]       --> [websocket.service]
+
+' --- Utils / constants ---
+[services]           --> [api.service]
+[api.service]        --> [utils (cn)]
+[Admin Pages]        --> [utils]
+[Admin Pages]        --> [constants]
+[PermissionGuard]    --> [permissions.utils]
+
+' --- Backend: AppModule composes everything ---
+[AppModule]          --> [DatabaseModule]
+[AppModule]          --> [GatewaysModule]
+[AppModule]          --> [config]
+[AppModule]          --> [AuthModule]
+[AppModule]          --> [UsersModule]
+[AppModule]          --> [CampusModule]
+[AppModule]          --> [RoomModule]
+[AppModule]          --> [LockerModule]
+[AppModule]          --> [ScheduleModule]
+[AppModule]          --> [TimeSlotsModule]
+[AppModule]          --> [DeviceModule]
+[AppModule]          --> [RolesModule]
+[AppModule]          --> [AuditLogsModule]
+
+' --- Modules depend on schemas ---
+[AuthModule]         --> [UserSchema]
+[UsersModule]        --> [UserSchema]
+[CampusModule]       --> [CampusSchema]
+[RoomModule]         --> [RoomSchema]
+[LockerModule]       --> [LockerSchema]
+[ScheduleModule]     --> [ScheduleSchema]
+[ScheduleModule]     --> [TimeSlotSchema]
+[TimeSlotsModule]    --> [TimeSlotSchema]
+[DeviceModule]       --> [DeviceSchema]
+[DeviceModule]       --> [Esp32Schema]
+[RolesModule]        --> [RoleSchema]
+[RolesModule]        --> [PermissionSchema]
+[RolesModule]        --> [RolePermissionSchema]
+[AuditLogsModule]    --> [UserSchema]
+
+' --- Common used across modules ---
+[AuthController]     --> [JwtAuthGuard / RolesGuard]
+[AuthController]     --> [PermissionsGuard]
+[UsersController]    --> [JwtAuthGuard / RolesGuard]
+[UsersController]    --> [PermissionsGuard]
+[RoomController]     --> [CampusScopeGuard]
+[LockerController]   --> [CampusScopeGuard]
+[ScheduleController] --> [CampusScopeGuard]
+[AuditLogsService]   --> [AuditLogInterceptor]
+[AppModule]          --> [HttpExceptionFilter]
+[AppModule]          --> [TransformInterceptor]
+[AppModule]          --> [LoggingInterceptor]
+
+' --- Auth strategies ---
+[AuthService]        --> [JwtStrategy]
+[AuthService]        --> [GoogleStrategy]
+
+' --- Frontend <-> Backend communication ---
+[services] ..> [AppController] : HTTP REST API
+[websocket.service] ..> [EventsGateway] : WebSocket
+
+@enduml
