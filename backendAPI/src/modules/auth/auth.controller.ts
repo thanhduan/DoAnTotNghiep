@@ -55,10 +55,15 @@ export class AuthController {
         user.campusId,
       );
 
-
-
-      // Get frontend URL from config
       const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+      const mobileAppUrl = this.configService.get<string>('MOBILE_APP_URL') || 'smartlockermobile://auth/callback';
+      const isMobileClient = user.client === 'mobile';
+      const hasValidMobileRedirectUri =
+        typeof user.redirectUri === 'string' &&
+        (user.redirectUri.startsWith('exp://') ||
+          user.redirectUri.startsWith('smartlockermobile://') ||
+          user.redirectUri.startsWith('https://'));
+      const mobileRedirectBase = hasValidMobileRedirectUri ? user.redirectUri : mobileAppUrl;
 
       // Prepare response data with permissions
       const responseData = {
@@ -67,15 +72,26 @@ export class AuthController {
         permissions: result.permissions,
       };
 
-      // Redirect to frontend with token and full response data
-      const redirectUrl = `${frontendUrl}/auth/callback?token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(responseData))}`;
+      const redirectBase = isMobileClient ? mobileRedirectBase : `${frontendUrl}/auth/callback`;
+      const separator = redirectBase.includes('?') ? '&' : '?';
+      const redirectUrl = `${redirectBase}${separator}token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(responseData))}`;
       return res.redirect(redirectUrl);
     } catch (error) {
       console.error('❌ Auth error:', error.message);
 
       // Redirect to frontend with error
       const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-      const errorUrl = `${frontendUrl}/login?error=${encodeURIComponent(error.message)}`;
+      const mobileAppUrl = this.configService.get<string>('MOBILE_APP_URL') || 'smartlockermobile://auth/callback';
+      const isMobileClient = req.user?.client === 'mobile';
+      const hasValidMobileRedirectUri =
+        typeof req.user?.redirectUri === 'string' &&
+        (req.user.redirectUri.startsWith('exp://') ||
+          req.user.redirectUri.startsWith('smartlockermobile://') ||
+          req.user.redirectUri.startsWith('https://'));
+      const mobileRedirectBase = hasValidMobileRedirectUri ? req.user.redirectUri : mobileAppUrl;
+      const errorBase = isMobileClient ? mobileRedirectBase : `${frontendUrl}/login`;
+      const separator = errorBase.includes('?') ? '&' : '?';
+      const errorUrl = `${errorBase}${separator}error=${encodeURIComponent(error.message)}`;
 
       console.log('🔄 Redirecting to error page:', errorUrl);
       return res.redirect(errorUrl);
