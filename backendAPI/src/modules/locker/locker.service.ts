@@ -60,6 +60,8 @@ export class LockerService {
 
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
+
+      esp32Id: item.esp32Id ?? null, // Include esp32Id if it exists
     };
   }
 
@@ -77,11 +79,25 @@ export class LockerService {
       throw new BadRequestException('Locker number already exists');
     }
 
+    if (!dto.esp32Id) {
+      throw new BadRequestException('ESP32 device must be selected');
+    }
+
+    const esp32 = await this.esp32Model.findById(dto.esp32Id);
+    if (!esp32) {
+      throw new BadRequestException('ESP32 device not found');
+    }
+
+    // Assign deviceId from ESP32
+    dto.deviceId = esp32.deviceId;
+
+    const esp32ObjectId = dto.esp32Id; // Save esp32Id before deleting
+    delete dto.esp32Id;
+
     const created = await this.lockerModel.create({
       ...dto,
-      campusId: dto.campusId
-        ? new Types.ObjectId(dto.campusId)
-        : null,
+      esp32Id: new Types.ObjectId(esp32ObjectId),
+      campusId: dto.campusId ? new Types.ObjectId(dto.campusId) : null,
     });
 
     const populated = await created.populate('campusId', 'campusName');
@@ -254,5 +270,32 @@ export class LockerService {
       result: 'SUCCESS',
       current_state: action === 'open' ? 'OPEN' : 'CLOSED',
     };
+  }
+
+  async findAllEsp32Devices() {
+    console.log('Fetching all ESP32 devices...');
+    try {
+      const devices = await this.esp32Model.find().exec();
+
+      // Fetch lockers associated with each ESP32 device
+      const enrichedDevices = await Promise.all(
+        devices.map(async (device) => {
+          const lockers = await this.lockerModel.find({ esp32Id: device._id }).exec();
+          return {
+            ...device.toObject(),
+            lockers: lockers.map((locker) => ({
+              lockerNumber: locker.lockerNumber,
+              status: locker.status,
+            })),
+          };
+        })
+      );
+
+      console.log('Enriched devices:', enrichedDevices);
+      return enrichedDevices;
+    } catch (error) {
+      console.error('Error fetching ESP32 devices:', error);
+      throw error;
+    }
   }
 }
