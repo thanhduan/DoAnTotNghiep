@@ -304,9 +304,9 @@ const LockerManagementPage: React.FC = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="available">Có Sẵn</option>
-              <option value="occupied">Đang Sử Dụng</option>
-              <option value="maintenance">Bảo Trì</option>
+              <option value="available">Available</option>
+              <option value="occupied">Occupied</option>
+              <option value="maintenance">Maintenance</option>
             </select>
 
             <select
