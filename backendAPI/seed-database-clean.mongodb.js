@@ -26,6 +26,7 @@ db.role_permissions.drop();
 db.campus.drop();
 db.users.drop();
 db.rooms.drop();
+db.devices.drop();
 db.schedules.drop();
 db.lockers.drop();
 db.settings.drop();
@@ -508,7 +509,6 @@ const roomsResult = db.rooms.insertMany([
     floor: 3,
     capacity: 45,
     roomType: "classroom",
-    facilities: ["projector", "whiteboard", "air_conditioner", "sound_system"],
     lockerNumber: 2,
     campusId: ObjectId("693ad44426d23ee0a8bf08f5"),
     status: "available",
@@ -525,7 +525,6 @@ const roomsResult = db.rooms.insertMany([
     floor: 3,
     capacity: 40,
     roomType: "classroom",
-    facilities: ["projector", "whiteboard", "air_conditioner"],
     lockerNumber: 2,
     campusId: ObjectId("693ad44426d23ee0a8bf08f5"),
     status: "available",
@@ -539,7 +538,105 @@ const roomsResult = db.rooms.insertMany([
 print(`✅ Inserted ${Object.keys(roomsResult.insertedIds).length} rooms`);
 
 // ============================================================
-// STEP 8: INSERT LOCKERS
+// STEP 8: INSERT DEVICES (room assets)
+// ============================================================
+print('\n🧰 Creating Devices...');
+
+const devicesResult = db.devices.insertMany([
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf091f"),
+    deviceCode: "G301_KEY",
+    deviceName: "Chìa khóa phòng G301",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090b"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf0920"),
+    deviceCode: "G301_REMOTE_AC",
+    deviceName: "Remote máy lạnh G301",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090b"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf0921"),
+    deviceCode: "G301_PROJECTOR",
+    deviceName: "Máy chiếu G301",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090b"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf0922"),
+    deviceCode: "G301_WHITEBOARD",
+    deviceName: "Bảng trắng G301",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090b"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf0923"),
+    deviceCode: "G302_KEY",
+    deviceName: "Chìa khóa phòng G302",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090c"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf0924"),
+    deviceCode: "G302_REMOTE_AC",
+    deviceName: "Remote máy lạnh G302",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090c"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf0925"),
+    deviceCode: "G302_PROJECTOR",
+    deviceName: "Máy chiếu G302",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090c"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: ObjectId("693ad44526d23ee0a8bf0926"),
+    deviceCode: "G302_WHITEBOARD",
+    deviceName: "Bảng trắng G302",
+    deviceStatus: "ok",
+    quantity: 1,
+    roomId: ObjectId("693ad44526d23ee0a8bf090c"),
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+]);
+
+print(`✅ Inserted ${Object.keys(devicesResult.insertedIds).length} devices`);
+
+// ============================================================
+// STEP 9: INSERT LOCKERS
 // ============================================================
 print('\n🔐 Creating Lockers...');
 
@@ -577,7 +674,7 @@ const lockersResult = db.lockers.insertMany([
 print(`✅ Inserted ${Object.keys(lockersResult.insertedIds).length} lockers`);
 
 // ============================================================
-// STEP 9: INSERT SETTINGS
+// STEP 10: INSERT SETTINGS
 // ============================================================
 print('\n⚙️ Creating Settings...');
 
@@ -638,7 +735,7 @@ const settingsResult = db.settings.insertMany([
 print(`✅ Inserted ${Object.keys(settingsResult.insertedIds).length} settings`);
 
 // ============================================================
-// STEP 10: INSERT SCHEDULES
+// STEP 11: INSERT SCHEDULES
 // ============================================================
 print('\n📅 Creating Schedules...');
 
@@ -740,7 +837,7 @@ const schedulesResult = db.schedules.insertMany([
 print(`✅ Inserted ${Object.keys(schedulesResult.insertedIds).length} schedules`);
 
 // ============================================================
-// STEP 11: INSERT BOOKINGS (Request/Approval System)
+// STEP 12: INSERT BOOKINGS (Request/Approval System)
 // ============================================================
 print('\n📋 Creating Bookings...');
 
@@ -792,7 +889,7 @@ const bookingsResult = db.bookings.insertMany([
 print(`✅ Inserted ${Object.keys(bookingsResult.insertedIds).length} bookings`);
 
 // ============================================================
-// STEP 12: INSERT TRANSFERS (Key Handover System)
+// STEP 13: INSERT TRANSFERS (Key Handover System)
 // ============================================================
 print('\n🔄 Creating Transfers...');
 
@@ -821,7 +918,7 @@ const transfersResult = db.transfers.insertMany([
 print(`✅ Inserted ${Object.keys(transfersResult.insertedIds).length} transfers`);
 
 // ============================================================
-// STEP 13: INSERT INCIDENTS (Damage Reports)
+// STEP 14: INSERT INCIDENTS (Damage Reports)
 // ============================================================
 print('\n⚠️ Creating Incidents...');
 
@@ -873,7 +970,7 @@ const incidentsResult = db.incidents.insertMany([
 print(`✅ Inserted ${Object.keys(incidentsResult.insertedIds).length} incidents`);
 
 // ============================================================
-// STEP 14: INSERT NOTIFICATIONS
+// STEP 15: INSERT NOTIFICATIONS
 // ============================================================
 print('\n🔔 Creating Notifications...');
 
@@ -924,7 +1021,7 @@ const notificationsResult = db.notifications.insertMany([
 print(`✅ Inserted ${Object.keys(notificationsResult.insertedIds).length} notifications`);
 
 // ============================================================
-// STEP 15: INSERT ACCESS LOGS (IoT Security Logs)
+// STEP 16: INSERT ACCESS LOGS (IoT Security Logs)
 // ============================================================
 print('\n🔐 Creating Access Logs...');
 
@@ -988,7 +1085,7 @@ const accessLogsResult = db.access_logs.insertMany([
 print(`✅ Inserted ${Object.keys(accessLogsResult.insertedIds).length} access logs`);
 
 // ============================================================
-// STEP 16: CREATE INDEXES
+// STEP 17: CREATE INDEXES
 // ============================================================
 print('\n📊 Creating Indexes...');
 

@@ -6,12 +6,19 @@ export class GoogleAuthGuard extends AuthGuard('google') {
   getAuthenticateOptions(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
     const campusId = request.query.campusId;
-    
-    console.log('🔍 GoogleAuthGuard - campusId from query:', campusId);
-    
+    const client = request.query.client || 'web';
+    const redirectUri = request.query.redirectUri || '';
+
+    const oauthState = JSON.stringify({
+      campusId: campusId || '',
+      client,
+      redirectUri,
+    });
+
+    console.log('🔍 GoogleAuthGuard - oauth state:', oauthState);
+
     return {
-      // Pass campusId as state parameter to Google OAuth
-      state: campusId || '',
+      state: oauthState,
     };
   }
 }

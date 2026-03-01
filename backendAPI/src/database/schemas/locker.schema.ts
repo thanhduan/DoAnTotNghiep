@@ -31,6 +31,12 @@ export class Locker extends Document {
 
   @Prop({ default: true })
   isActive: boolean;
+
+  @Prop({ default: null })
+  roomId?: string | null;
+
+  @Prop({ default: 'Unmapped' })
+  roomName?: string;
 }
 
 export const LockerSchema = SchemaFactory.createForClass(Locker);

@@ -35,10 +35,24 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ): Promise<any> {
     const { id, emails, displayName, photos } = profile;
 
-    // Get campusId from state parameter (returned from Google)
-    const campusId = req.query?.state;
+    const rawState = req.query?.state;
+    let campusId = '';
+    let client = 'web';
+    let redirectUri = '';
+
+    if (rawState) {
+      try {
+        const parsed = JSON.parse(rawState);
+        campusId = parsed?.campusId || '';
+        client = parsed?.client || 'web';
+        redirectUri = parsed?.redirectUri || '';
+      } catch {
+        campusId = rawState;
+      }
+    }
 
     console.log('🔍 GoogleStrategy validate - campusId from state:', campusId);
+    console.log('🔍 GoogleStrategy validate - client from state:', client);
     console.log('🔍 Request query:', req.query);
 
     const user = {
@@ -47,6 +61,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       fullName: displayName,
       avatar: photos[0]?.value || '',
       campusId,
+      client,
+      redirectUri,
     };
 
     done(null, user);

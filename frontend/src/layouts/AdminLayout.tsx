@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   FileText,
+  Cpu,
 } from 'lucide-react';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -42,9 +43,10 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { id: 'audit-logs', label: 'Audit Logs', icon: FileText, path: '/audit-logs' },
     { id: 'lockers', label: 'Lockers', icon: Lock, path: '/lockers' },
     { id: 'bookings', label: 'Bookings', icon: BookOpen, path: '/bookings' },
+    { id: 'rooms', label: 'Rooms', icon: Building2, path: '/rooms' },
+    { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
     { id: 'approval', label: 'Approval', icon: ClipboardCheck, path: '/approval' },
     { id: 'schedule', label: 'Schedule', icon: Calendar, path: '/schedules' },
-    { id: 'campus', label: 'Campus', icon: Building2, path: '/campus' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 
