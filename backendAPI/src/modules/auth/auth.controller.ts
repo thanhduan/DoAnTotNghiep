@@ -65,15 +65,25 @@ export class AuthController {
           user.redirectUri.startsWith('https://'));
       const mobileRedirectBase = hasValidMobileRedirectUri ? user.redirectUri : mobileAppUrl;
 
-      // Prepare response data with permissions
+      const redirectBase = isMobileClient ? mobileRedirectBase : `${frontendUrl}/auth/callback`;
+      const separator = redirectBase.includes('?') ? '&' : '?';
+
+      if (!isMobileClient) {
+        const redirectUrl = `${redirectBase}${separator}token=${result.accessToken}`;
+        return res.redirect(redirectUrl);
+      }
+
+      // Mobile can still receive user payload, but keep it compact
       const responseData = {
         user: result.user,
         roleDetails: result.roleDetails,
-        permissions: result.permissions,
+        permissions: (result.permissions || []).map((permission: any) => ({
+          permissionName: permission.permissionName,
+          resource: permission.resource,
+          action: permission.action,
+        })),
       };
 
-      const redirectBase = isMobileClient ? mobileRedirectBase : `${frontendUrl}/auth/callback`;
-      const separator = redirectBase.includes('?') ? '&' : '?';
       const redirectUrl = `${redirectBase}${separator}token=${result.accessToken}&user=${encodeURIComponent(JSON.stringify(responseData))}`;
       return res.redirect(redirectUrl);
     } catch (error) {

@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       .findById(userId)
       .select('-faceData -fingerprintData')
       .populate('campusId', 'campusCode campusName')
-      .populate('roleId', 'roleCode roleLevel canAccessWeb')
+      .populate('roleId', 'roleCode roleLevel canAccessWeb scope')
       .exec();
 
     if (!user || !user.isActive) {
@@ -42,12 +42,22 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     // Fetch user permissions
+    const resolvedRoleId = (user.roleId as any)?._id || user.roleId;
     const rolePermissions = await this.rolePermissionModel
-      .find({ roleId: user.roleId })
+      .find({ roleId: resolvedRoleId })
       .populate('permissionId')
       .exec();
 
-    const permissions = rolePermissions.map((rp: any) => rp.permissionId.permissionName);
+    const permissionsFromDb = rolePermissions
+      .filter((rp: any) => rp.permissionId)
+      .map((rp: any) => rp.permissionId.permissionName)
+      .filter(Boolean);
+
+    const permissionsFromToken = Array.isArray(payload.permissions)
+      ? payload.permissions.filter(Boolean)
+      : [];
+
+    const permissions = permissionsFromDb.length > 0 ? permissionsFromDb : permissionsFromToken;
 
     
 
@@ -59,6 +69,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       roleId: user.roleId,
       roleCode: (user.roleId as any).roleCode,
       roleLevel: (user.roleId as any).roleLevel,
+      roleScope: (user.roleId as any).scope,
       canAccessWeb: (user.roleId as any).canAccessWeb || false,
       campusId: user.campusId?._id || null,
       campusCode: (user.campusId as any)?.campusCode || null,
