@@ -19,7 +19,7 @@ const LecturerSelfDemoPage: React.FC = () => {
         const data = await scheduleService.getAll();
         setSchedules(data || []);
       } catch (err: any) {
-        setError(err?.message || 'Không thể tải dữ liệu lịch học demo');
+        setError(err?.message || 'Cannot load demo schedule data');
       } finally {
         setIsLoading(false);
       }
@@ -33,7 +33,7 @@ const LecturerSelfDemoPage: React.FC = () => {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
         <h1 className="text-2xl font-bold text-gray-900">Lecturer Demo - Scope SELF</h1>
         <p className="mt-2 text-gray-600">
-          Trang demo phân luồng cho giảng viên: chỉ đọc dữ liệu của chính mình.
+          Demo page for lecturer scope: only reads own data.
         </p>
       </div>
 
@@ -53,9 +53,9 @@ const LecturerSelfDemoPage: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Thông tin người dùng</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">User Information</h2>
         <div className="text-sm text-gray-700 space-y-1">
-          <p>Họ tên: {user?.fullName || '-'}</p>
+          <p>Full Name: {user?.fullName || '-'}</p>
           <p>Email: {user?.email || '-'}</p>
           <p>Campus: {user?.campusId?.campusName || '-'}</p>
         </div>
@@ -63,29 +63,27 @@ const LecturerSelfDemoPage: React.FC = () => {
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold text-gray-900">Lịch học (đã scope SELF ở backend)</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Schedule (scoped SELF in backend)</h2>
           <button
             onClick={() => navigate('/lecturer/schedules')}
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
           >
-            Xem chi tiết lịch giảng dạy theo tuần
+            View detailed weekly teaching schedule
           </button>
         </div>
-
-        {isLoading && <p className="text-gray-600">Đang tải dữ liệu...</p>}
+        {isLoading && <p className="text-gray-600">Loading data...</p>}
         {error && <p className="text-red-600">{error}</p>}
-
         {!isLoading && !error && (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm border border-gray-300 rounded-lg overflow-hidden">
               <thead>
                 <tr className="bg-gray-100 text-center text-gray-700">
-                  <th className="py-2 px-4 border border-gray-300">Ngày</th>
-                  <th className="py-2 px-4 border border-gray-300">Mã lớp</th>
-                  <th className="py-2 px-4 border border-gray-300">Môn học</th>
-                  <th className="py-2 px-4 border border-gray-300">Phòng</th>
+                  <th className="py-2 px-4 border border-gray-300">Date</th>
+                  <th className="py-2 px-4 border border-gray-300">Class Code</th>
+                  <th className="py-2 px-4 border border-gray-300">Subject Name</th>
+                  <th className="py-2 px-4 border border-gray-300">Room</th>
                   <th className="py-2 px-4 border border-gray-300">Slot</th>
-                  <th className="py-2 px-4 border border-gray-300">Thời gian</th>
+                  <th className="py-2 px-4 border border-gray-300">Time</th>
                 </tr>
               </thead>
               <tbody>
@@ -108,9 +106,8 @@ const LecturerSelfDemoPage: React.FC = () => {
                 })}
               </tbody>
             </table>
-
             {schedules.length === 0 && (
-              <p className="text-gray-500 mt-3">Không có lịch học phù hợp.</p>
+              <p className="text-gray-500 mt-3">No matching schedule found.</p>
             )}
           </div>
         )}
