@@ -354,6 +354,10 @@ export class ScheduleService {
       campusId: user.campusId,
     };
 
+    if (user.roleScope === 'SELF') {
+      filter.lecturerId = user._id;
+    }
+
     if (query.startDate && query.endDate) {
       filter.dateStart = {
         $gte: new Date(query.startDate),
@@ -362,7 +366,9 @@ export class ScheduleService {
     }
 
     if (query.roomId) filter.roomId = query.roomId;
-    if (query.lecturerId) filter.lecturerId = query.lecturerId;
+    if (query.lecturerId && user.roleScope !== 'SELF') {
+      filter.lecturerId = query.lecturerId;
+    }
     if (query.semester) filter.semester = query.semester;
     if (query.status) filter.status = query.status;
     if (query.slotType) filter.slotType = query.slotType;
@@ -387,6 +393,7 @@ export class ScheduleService {
       .findOne({
         _id: id,
         campusId: user.campusId,
+        ...(user.roleScope === 'SELF' ? { lecturerId: user._id } : {}),
       })
       .populate('roomId', 'roomCode roomName building capacity')
       .populate('lecturerId', 'fullName email')

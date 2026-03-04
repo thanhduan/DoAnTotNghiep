@@ -87,8 +87,14 @@ export const getRoleDisplayName = (roleCode: string): string => {
 /**
  * Get default dashboard route based on role (or use permissions)
  */
-export const getDefaultDashboard = (roleName: string): string => {
-  // Default to /home for all users, let ProtectedRoute handle access
-  // Users with admin permissions will access /dashboard via permissions
+export const getDefaultDashboard = (
+  roleName: string,
+  roleScope?: string,
+  roleCode?: string,
+): string => {
+  if (roleCode === ROLE_CODES.LECTURER && roleScope === 'SELF') {
+    return '/lecturer/demo-self';
+  }
+
   return '/dashboard';
 };

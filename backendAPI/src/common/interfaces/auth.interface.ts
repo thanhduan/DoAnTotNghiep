@@ -3,6 +3,7 @@ export interface JwtPayload {
   email: string;
   roleCode: string; // SUPER_ADMIN, CAMPUS_ADMIN, etc.
   roleLevel: number; // Hierarchy level
+  roleScope: string; // GLOBAL, CAMPUS, SELF
   campusId: string | null; // null for Super Admin in Phase 1
   permissions: string[]; // Array of permission strings
 }

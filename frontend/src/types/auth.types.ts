@@ -25,6 +25,7 @@ export interface RoleDetails {
   roleName: string;
   roleCode: string;
   roleLevel: number;
+  scope?: string;
   canAccessWeb?: boolean; // Can this role access web application
   description: string;
 }
