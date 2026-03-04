@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { PERMISSIONS } from '@/utils/permissions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,25 +31,114 @@ import {
 } from 'lucide-react';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout, roleDetails } = useAuth();
+  const { user, logout, roleDetails, hasAnyPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [notifications] = useState(3);
+  const userScope = (roleDetails?.scope || '').toUpperCase();
 
-  const menuItems = [
+  const baseMenuItems: Array<{
+    id: string;
+    label: string;
+    icon: any;
+    path: string;
+    requiredPermissions?: string[];
+  }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { id: 'users', label: 'User Management', icon: Users, path: '/users' },
-    { id: 'roles', label: 'Role Management', icon: Shield, path: '/roles' },
-    { id: 'audit-logs', label: 'Audit Logs', icon: FileText, path: '/audit-logs' },
-    { id: 'lockers', label: 'Lockers', icon: Lock, path: '/lockers' },
-    { id: 'bookings', label: 'Bookings', icon: BookOpen, path: '/bookings' },
-    { id: 'rooms', label: 'Rooms', icon: Building2, path: '/rooms' },
-    { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
-    { id: 'approval', label: 'Approval', icon: ClipboardCheck, path: '/approval' },
-    { id: 'schedule', label: 'Schedule', icon: Calendar, path: '/schedules' },
-    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
+    {
+      id: 'users',
+      label: 'User Management',
+      icon: Users,
+      path: '/users',
+      requiredPermissions: [PERMISSIONS.USERS_READ],
+    },
+    {
+      id: 'roles',
+      label: 'Role Management',
+      icon: Shield,
+      path: '/roles',
+      requiredPermissions: [PERMISSIONS.ROLES_READ],
+    },
+    {
+      id: 'audit-logs',
+      label: 'Audit Logs',
+      icon: FileText,
+      path: '/audit-logs',
+      requiredPermissions: [PERMISSIONS.LOGS_READ],
+    },
+    {
+      id: 'lockers',
+      label: 'Lockers',
+      icon: Lock,
+      path: '/lockers',
+      requiredPermissions: [PERMISSIONS.LOCKERS_READ],
+    },
+    {
+      id: 'bookings',
+      label: 'Bookings',
+      icon: BookOpen,
+      path: '/bookings',
+      requiredPermissions: [PERMISSIONS.BOOKINGS_READ],
+    },
+    {
+      id: 'rooms',
+      label: 'Rooms',
+      icon: Building2,
+      path: '/rooms',
+      requiredPermissions: [PERMISSIONS.ROOMS_READ],
+    },
+    {
+      id: 'devices',
+      label: 'Devices',
+      icon: Cpu,
+      path: '/devices',
+      requiredPermissions: [PERMISSIONS.ROOMS_READ],
+    },
+    {
+      id: 'approval',
+      label: 'Approval',
+      icon: ClipboardCheck,
+      path: '/approval',
+      requiredPermissions: [PERMISSIONS.BOOKINGS_APPROVE],
+    },
+    {
+      id: 'schedule',
+      label: 'Schedule',
+      icon: Calendar,
+      path: '/schedules',
+      requiredPermissions: [PERMISSIONS.SCHEDULES_READ],
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
+      path: '/settings',
+      requiredPermissions: [PERMISSIONS.SETTINGS_UPDATE],
+    },
   ];
+
+  const lecturerDemoMenuItem = {
+    id: 'lecturer-self-demo',
+    label: 'Lecturer Demo',
+    icon: Calendar,
+    path: '/lecturer/demo-self',
+  };
+
+  let menuItems = baseMenuItems;
+
+  if (userScope === 'SELF') {
+    menuItems = [lecturerDemoMenuItem];
+  } else if (userScope === 'CAMPUS') {
+    menuItems = baseMenuItems;
+  } else {
+    menuItems = baseMenuItems.filter((item) => {
+      if (!item.requiredPermissions || item.requiredPermissions.length === 0) {
+        return true;
+      }
+      return hasAnyPermission(item.requiredPermissions);
+    });
+  }
 
   const isActivePath = (path: string) => location.pathname === path;
   

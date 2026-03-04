@@ -38,7 +38,10 @@ const AuthCallbackPage: React.FC = () => {
       }
 
       try {
-        // Parse user from URL parameter
+        // Save token first so profile API can be called
+        authService.saveToken(token);
+
+        // Parse user from URL parameter (if provided)
         let user = null;
         let roleDetails = null;
         let permissions = [];
@@ -57,6 +60,14 @@ const AuthCallbackPage: React.FC = () => {
           }
         }
 
+        // New flow: backend web callback sends token only, fetch profile from API
+        if (!user) {
+          const profile = await authService.getCurrentUser();
+          user = profile.user;
+          roleDetails = profile.roleDetails;
+          permissions = profile.permissions;
+        }
+
         if (!user) {
           console.error('No user data received');
           hasProcessed.current = true;
@@ -65,7 +76,6 @@ const AuthCallbackPage: React.FC = () => {
         }
 
         // Save all auth data
-        authService.saveToken(token);
         authService.saveUser(user);
         authService.saveRoleDetails(roleDetails);
         authService.savePermissions(permissions);
@@ -79,7 +89,11 @@ const AuthCallbackPage: React.FC = () => {
         hasProcessed.current = true;
         
         // Redirect based on role - Sử dụng helper function
-        const defaultRoute = getDefaultDashboard(userRoleName);
+        const defaultRoute = getDefaultDashboard(
+          userRoleName,
+          roleDetails?.scope,
+          roleDetails?.roleCode,
+        );
         navigate(defaultRoute, { replace: true });
       } catch (err) {
         console.error('Failed to process auth callback:', err);

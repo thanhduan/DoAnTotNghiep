@@ -17,6 +17,7 @@ import AuditLogPage from '../pages/Admin/AuditLogPage';
 import ScheduleManagementPage from '../pages/Admin/ScheduleManagementPage';
 import DeviceManagementPage from '../pages/Admin/DeviceManagementPage';
 import UserProfilePage from '../pages/Admin/UserProfilePage';
+import LecturerSelfDemoPage from '../pages/Lecturer/LecturerSelfDemoPage';
 
 
 const AppRoutes: React.FC = () => {
@@ -137,6 +138,21 @@ const AppRoutes: React.FC = () => {
               >
                 <AdminLayout>
                   <ScheduleManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/lecturer/demo-self"
+            element={
+              <ProtectedRoute
+                allowedRoleCodes={['LECTURER']}
+                requiredScopes={['SELF']}
+                requiredPermissions={[PERMISSIONS.SCHEDULES_READ]}
+              >
+                <AdminLayout>
+                  <LecturerSelfDemoPage />
                 </AdminLayout>
               </ProtectedRoute>
             }

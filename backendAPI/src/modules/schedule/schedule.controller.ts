@@ -22,14 +22,20 @@ import { CampusScopeGuard } from '@/common/guards/campus-scope.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { RequirePermissions } from '@/common/decorators/permissions.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { ScopeGuard } from '@/common/guards/scope.guard';
+import { RequireScopes } from '@/common/decorators/scopes.decorator';
 
 @Controller('schedules')
-@UseGuards(JwtAuthGuard, CampusScopeGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, CampusScopeGuard, PermissionsGuard, ScopeGuard)
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
 
   // POST /schedules/import - CSV/Excel import (formats: .csv, .xlsx, .xls)
   @Post('import')
+  @Roles('TRAINING_OFFICER', 'CAMPUS_ADMIN', 'SUPER_ADMIN')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   @RequirePermissions('schedules.create')
   @UseInterceptors(FileInterceptor('file'))
   async importSchedules(
@@ -68,6 +74,7 @@ export class ScheduleController {
 
   // GET /schedules - Query with filters (startDate, endDate, roomId, lecturerId, etc.)
   @Get()
+  @RequireScopes('SELF', 'CAMPUS', 'GLOBAL')
   @RequirePermissions('schedules.read')
   async findAll(@Query() query: QueryScheduleDto, @CurrentUser() user: any) {
     const schedules = await this.scheduleService.findAll(query, user);
@@ -81,6 +88,7 @@ export class ScheduleController {
 
   // GET /schedules/:id
   @Get(':id')
+  @RequireScopes('SELF', 'CAMPUS', 'GLOBAL')
   @RequirePermissions('schedules.read')
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const schedule = await this.scheduleService.findOne(id, user);
@@ -93,6 +101,8 @@ export class ScheduleController {
 
   // PATCH /schedules/:id
   @Patch(':id')
+  @Roles('TRAINING_OFFICER', 'CAMPUS_ADMIN', 'SUPER_ADMIN')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   @RequirePermissions('schedules.update')
   async update(
     @Param('id') id: string,
@@ -110,6 +120,8 @@ export class ScheduleController {
 
   // DELETE /schedules/:id
   @Delete(':id')
+  @Roles('TRAINING_OFFICER', 'CAMPUS_ADMIN', 'SUPER_ADMIN')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   @RequirePermissions('schedules.delete')
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     await this.scheduleService.remove(id, user);
