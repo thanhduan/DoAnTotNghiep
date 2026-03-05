@@ -17,7 +17,9 @@ import AuditLogPage from '../pages/Admin/AuditLogPage';
 import ScheduleManagementPage from '../pages/Admin/ScheduleManagementPage';
 import DeviceManagementPage from '../pages/Admin/DeviceManagementPage';
 import UserProfilePage from '../pages/Admin/UserProfilePage';
-
+import BookingManagementPage from '../pages/Admin/BookingManagementPage';
+import LecturerSelfDemoPage from '../pages/Lecturer/LecturerSelfDemoPage';
+import LecturerSchedulePage from '../pages/Lecturer/LecturerSchedulePage';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -141,18 +143,46 @@ const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/lecturer/demo-self"
+            element={
+              <ProtectedRoute
+                allowedRoleCodes={['LECTURER']}
+                requiredScopes={['SELF']}
+                requiredPermissions={[PERMISSIONS.SCHEDULES_READ]}
+              >
+                <AdminLayout>
+                  <LecturerSelfDemoPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/lecturer/schedules"
+            element={
+              <ProtectedRoute
+                allowedRoleCodes={["LECTURER"]}
+                requiredScopes={["SELF"]}
+                requiredPermissions={[PERMISSIONS.SCHEDULES_READ]}
+              >
+                <AdminLayout>
+                  <LecturerSchedulePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
           
           <Route
             path="/bookings"
             element={
               <ProtectedRoute 
-                requiredPermissions={[PERMISSIONS.BOOKINGS_READ]}
+                requiredPermissions={[PERMISSIONS.BOOKINGS_MANAGE]}
+                requiredScopes={['CAMPUS']}
               >
                 <AdminLayout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Đặt phòng</h2>
-                    <p className="mt-2 text-gray-600">Trang này đang được phát triển</p>
-                  </div>
+                  <BookingManagementPage />
                 </AdminLayout>
               </ProtectedRoute>
             }
@@ -176,7 +206,7 @@ const AppRoutes: React.FC = () => {
 
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/lecturer/self-demo" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

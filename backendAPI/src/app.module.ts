@@ -16,6 +16,8 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
 import { ScheduleModule } from './modules/schedule/schedule.module';
 import { TimeSlotsModule } from './modules/time-slots/time-slots.module';
 import { DeviceModule } from './modules/device/device.module';
+import { TransfersModule } from './modules/transfers/transfers.module';
+import { BookingModule } from './modules/booking/booking.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { DeviceModule } from './modules/device/device.module';
     AuditLogsModule,
     ScheduleModule,
     TimeSlotsModule,
+    TransfersModule,
+    BookingModule,
   ],
   controllers: [AppController],
   providers: [

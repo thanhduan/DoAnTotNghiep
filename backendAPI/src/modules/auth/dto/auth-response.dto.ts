@@ -14,6 +14,7 @@ export class AuthResponseDto {
     roleCode: string;
     roleName: string;
     roleLevel: number;
+    scope: string;
     description: string;
   };
   permissions?: Array<{

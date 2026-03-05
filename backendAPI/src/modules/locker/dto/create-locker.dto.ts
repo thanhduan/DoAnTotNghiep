@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsDateString,
+  IsArray,
 } from 'class-validator';
 import { LockerStatus } from '@/common/enums';
 
@@ -39,4 +40,15 @@ export class CreateLockerDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsMongoId()
+  esp32Id?: string;
+
+  @IsOptional()
+  @IsArray()
+  solenoids?: {
+    id: string;
+    connected: boolean;
+  }[];
 }

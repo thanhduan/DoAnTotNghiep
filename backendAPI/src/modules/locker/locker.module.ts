@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { LockerController } from './locker.controller';
+import { Esp32Controller } from './locker.controller';
 import { LockerService } from './locker.service';
 
 import { Locker, LockerSchema } from '@/database/schemas/locker.schema';
@@ -15,7 +16,7 @@ import { ESP32, ESP32Schema } from '@/database/schemas/esp32.schema';
       { name: ESP32.name, schema: ESP32Schema },
     ]),
   ],
-  controllers: [LockerController],
+  controllers: [LockerController, Esp32Controller],
   providers: [LockerService],
 })
 export class LockerModule {}

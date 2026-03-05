@@ -7,6 +7,8 @@ import { getDefaultDashboard } from '../constants/roles';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
+  allowedRoleCodes?: string[];
+  requiredScopes?: string[];
   requiredPermissions?: string[]; // Any of these permissions
   requiredAllPermissions?: string[]; // All of these permissions
   requireResource?: { resource: string; action: string }; // Specific resource.action
@@ -15,6 +17,8 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   allowedRoles,
+  allowedRoleCodes,
+  requiredScopes,
   requiredPermissions,
   requiredAllPermissions,
   requireResource,
@@ -63,6 +67,50 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
       </div>
     );
+  }
+
+  if (allowedRoleCodes && allowedRoleCodes.length > 0) {
+    const userRoleCode = (roleDetails?.roleCode || '').toUpperCase();
+    const normalizedAllowedRoleCodes = allowedRoleCodes.map((code) => code.toUpperCase());
+
+    if (!userRoleCode || !normalizedAllowedRoleCodes.includes(userRoleCode)) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Truy cập bị từ chối</h2>
+            <p className="text-gray-600 mb-4">Vai trò của bạn không phù hợp với trang này.</p>
+            <button
+              onClick={() => window.history.back()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Quay lại
+            </button>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  if (requiredScopes && requiredScopes.length > 0) {
+    const userScope = (roleDetails?.scope || '').toUpperCase();
+    const normalizedRequiredScopes = requiredScopes.map((scope) => scope.toUpperCase());
+
+    if (!userScope || !normalizedRequiredScopes.includes(userScope)) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Truy cập bị từ chối</h2>
+            <p className="text-gray-600 mb-4">Scope hiện tại không được phép truy cập trang này.</p>
+            <button
+              onClick={() => window.history.back()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Quay lại
+            </button>
+          </div>
+        </div>
+      );
+    }
   }
 
   // Priority: Permission-based access first (new approach)
@@ -145,7 +193,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     
     if (!normalizedAllowedRoles.includes(normalizedUserRole)) {
       // Redirect to appropriate dashboard based on role
-      const defaultRoute = getDefaultDashboard(userRoleName);
+      const defaultRoute = getDefaultDashboard(
+        userRoleName,
+        roleDetails?.scope,
+        roleDetails?.roleCode,
+      );
       return <Navigate to={defaultRoute} replace />;
     }
   }

@@ -84,7 +84,7 @@ export class AuthService {
     const populatedUser = await this.userModel
       .findById(user._id)
       .populate('campusId', 'campusCode campusName address')
-      .populate('roleId', 'roleCode roleLevel roleName canAccessWeb')
+      .populate('roleId', 'roleCode roleLevel roleName canAccessWeb scope description')
       .exec();
 
     // 6. Get permissions for this role
@@ -99,6 +99,7 @@ export class AuthService {
         roleCode: role.roleCode,
         roleName: role.roleName,
         roleLevel: role.roleLevel,
+        scope: role.scope,
         canAccessWeb: role.canAccessWeb || false,
         description: role.description,
       };
@@ -134,6 +135,7 @@ export class AuthService {
       email: populatedUser.email,
       roleCode: roleDetails?.roleCode || 'STUDENT',
       roleLevel: roleDetails?.roleLevel || 4,
+      roleScope: roleDetails?.scope || 'SELF',
       campusId: populatedUser.campusId?._id?.toString() || null,
       permissions: permissionCodes,
     };
@@ -181,6 +183,9 @@ export class AuthService {
       roleDetails = {
         id: role._id.toString(),
         roleName: role.roleName,
+        roleCode: role.roleCode,
+        roleLevel: role.roleLevel,
+        scope: role.scope,
         canAccessWeb: role.canAccessWeb || false,
         description: role.description,
       };

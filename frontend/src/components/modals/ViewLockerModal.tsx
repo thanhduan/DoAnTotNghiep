@@ -30,7 +30,7 @@ const ViewLockerModal: React.FC<Props> = ({
               Số Tủ
             </label>
             <input
-              type="number"
+              type="text"
               value={locker.lockerNumber}
               readOnly
               className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
@@ -65,24 +65,29 @@ const ViewLockerModal: React.FC<Props> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Trạng Thái
             </label>
-            <input
-              type="text"
-              value={locker.status.charAt(0).toUpperCase() + locker.status.slice(1)}
-              readOnly
+            <select
+              value={locker.status}
+              disabled
               className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-            />
+            >
+              <option value="available">Có sẵn</option>
+              <option value="occupied">Đang sử dụng</option>
+              <option value="maintenance">Bảo trì</option>
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Cơ Sở
             </label>
-            <input
-              type="text"
-              value={locker.campusName ?? 'Chưa gán cơ sở'}
-              readOnly
+            <select
+              value={locker.campusId || ''}
+              disabled
               className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-            />
+            >
+              <option value="">Chưa gán cơ sở</option>
+              {locker.campusName && <option value={locker.campusId || ''}>{locker.campusName}</option>}
+            </select>
           </div>
 
           <div>
@@ -91,7 +96,7 @@ const ViewLockerModal: React.FC<Props> = ({
             </label>
             <input
               type="text"
-              value={locker.deviceId ?? 'N/A'}
+              value={locker.deviceId || locker.esp32Id || 'N/A'}
               readOnly
               className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
             />
@@ -101,12 +106,58 @@ const ViewLockerModal: React.FC<Props> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Trạng Thái Hoạt Động
             </label>
-            <input
-              type="text"
-              value={locker.isActive ? 'Hoạt động' : 'Không hoạt động'}
-              readOnly
+            <select
+              value={locker.isActive ? 'active' : 'inactive'}
+              disabled
               className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"
-            />
+            >
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+            </select>
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Danh Sách Khóa Điện Tử (Tổng số: {locker.solenoids?.length || 0})
+            </label>
+            <div className="bg-gray-100 p-4 rounded-lg max-h-40 overflow-y-auto">
+              {locker.solenoids && locker.solenoids.length > 0 ? (
+                <ul className="list-disc pl-5">
+                  {locker.solenoids.map((solenoid, index) => (
+                    <li key={index} className="text-gray-700">
+                      Khóa {index + 1}: 
+                      <span className={solenoid.connected ? 'text-green-600' : 'text-red-600'}>
+                        {solenoid.connected ? ' Kết nối' : ' Mất kết nối'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">Không có khóa điện tử nào</p>
+              )}
+            </div>
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Danh Sách Khóa Điện Tử
+            </label>
+            <div className="bg-gray-100 p-4 rounded-lg max-h-40 overflow-y-auto">
+              {locker.solenoids && locker.solenoids.length > 0 ? (
+                <ul className="list-disc pl-5">
+                  {locker.solenoids.map((solenoid, index) => (
+                    <li key={index} className="text-gray-700">
+                      Solenoid {index + 1}: 
+                      <span className={solenoid.connected ? 'text-green-600' : 'text-red-600'}>
+                        {solenoid.connected ? ' Kết nối' : ' Mất kết nối'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">Không có khóa điện tử nào</p>
+              )}
+            </div>
           </div>
         </div>
 
