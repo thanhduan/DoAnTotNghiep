@@ -36,7 +36,6 @@ import { TransfersModule } from './modules/transfers/transfers.module';
     AuditLogsModule,
     ScheduleModule,
     TimeSlotsModule,
-    // TransferRequestModule, // Xóa module cũ nếu không dùng nữa
     TransfersModule,
   ],
   controllers: [AppController],

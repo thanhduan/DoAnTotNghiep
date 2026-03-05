@@ -40,6 +40,9 @@ export class Transfer extends Document {
   completedAt: Date;
 
   @Prop()
+  cancelledAt: Date;
+
+  @Prop()
   notes: string;
 }
 
