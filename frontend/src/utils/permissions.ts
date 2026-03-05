@@ -70,6 +70,7 @@ export const PERMISSIONS = {
   BOOKINGS_READ: 'bookings.read',
   BOOKINGS_CREATE: 'bookings.create',
   BOOKINGS_APPROVE: 'bookings.approve',
+  BOOKINGS_MANAGE: 'bookings.manage',
   BOOKINGS_REJECT: 'bookings.reject',
   BOOKINGS_DELETE: 'bookings.delete',
   
@@ -131,6 +132,7 @@ export const getPermissionDisplayName = (permissionName: string): string => {
     'bookings.read': 'Xem đặt phòng',
     'bookings.create': 'Tạo đặt phòng',
     'bookings.approve': 'Duyệt đặt phòng',
+    'bookings.manage': 'Quản lý booking',
     'bookings.reject': 'Từ chối đặt phòng',
     'bookings.delete': 'Xóa đặt phòng',
     'lockers.read': 'Xem tủ khóa',

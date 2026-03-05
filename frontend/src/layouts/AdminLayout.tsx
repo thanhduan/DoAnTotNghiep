@@ -79,7 +79,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       label: 'Bookings',
       icon: BookOpen,
       path: '/bookings',
-      requiredPermissions: [PERMISSIONS.BOOKINGS_READ],
+      requiredPermissions: [PERMISSIONS.BOOKINGS_MANAGE],
     },
     {
       id: 'rooms',
