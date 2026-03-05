@@ -17,6 +17,7 @@ import { ScheduleModule } from './modules/schedule/schedule.module';
 import { TimeSlotsModule } from './modules/time-slots/time-slots.module';
 import { DeviceModule } from './modules/device/device.module';
 import { TransfersModule } from './modules/transfers/transfers.module';
+import { BookingModule } from './modules/booking/booking.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { TransfersModule } from './modules/transfers/transfers.module';
     ScheduleModule,
     TimeSlotsModule,
     TransfersModule,
+    BookingModule,
   ],
   controllers: [AppController],
   providers: [

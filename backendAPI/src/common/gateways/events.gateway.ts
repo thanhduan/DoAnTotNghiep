@@ -156,4 +156,13 @@ export class EventsGateway
       timestamp: new Date(),
     });
   }
+
+  // Broadcast booking change to all connected admin clients
+  broadcastBookingUpdate(action: 'created' | 'updated' | 'deleted', booking: any) {
+    this.server.emit('booking:updated', {
+      action,
+      booking,
+      timestamp: new Date(),
+    });
+  }
 }

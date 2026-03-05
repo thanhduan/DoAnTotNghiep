@@ -93,7 +93,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       label: 'Devices',
       icon: Cpu,
       path: '/devices',
-      requiredPermissions: [PERMISSIONS.ROOMS_READ],
+      requiredPermissions: [PERMISSIONS.DEVICES_READ],
     },
     {
       id: 'approval',
