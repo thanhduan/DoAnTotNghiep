@@ -132,6 +132,13 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     path: '/lecturer/booking-history',
   };
 
+  const lecturerScheduleMenuItem = {
+    id: 'lecturer-schedules',
+    label: 'My Schedule',
+    icon: BookOpen,
+    path: '/lecturer/schedules',
+  };
+
   let menuItems = baseMenuItems;
 
   if (userScope === 'SELF') {
