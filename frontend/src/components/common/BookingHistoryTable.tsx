@@ -48,6 +48,45 @@ const getBookingRoomText = (booking: Booking): string => {
   return roomName ? `${roomCode} - ${roomName}` : roomCode;
 };
 
+const getBookingSortTimestamp = (booking: Booking): number => {
+  if (booking.createdAt) {
+    const createdAt = new Date(booking.createdAt);
+    if (!Number.isNaN(createdAt.getTime())) {
+      return createdAt.getTime();
+    }
+  }
+
+  const bookingDate = new Date(booking.bookingDate);
+  if (Number.isNaN(bookingDate.getTime())) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const [hourText, minuteText] = (booking.startTime || '').split(':');
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (Number.isInteger(hour) && Number.isInteger(minute)) {
+    bookingDate.setHours(hour, minute, 0, 0);
+  }
+
+  return bookingDate.getTime();
+};
+
+const compareBookingsByPriority = (a: Booking, b: Booking): number => {
+  const priorityA = a.status === 'pending' ? 0 : 1;
+  const priorityB = b.status === 'pending' ? 0 : 1;
+
+  if (priorityA !== priorityB) {
+    return priorityA - priorityB;
+  }
+
+  const timeDiff = getBookingSortTimestamp(a) - getBookingSortTimestamp(b);
+  if (timeDiff !== 0) {
+    return timeDiff;
+  }
+
+  return a._id.localeCompare(b._id);
+};
+
 interface BookingHistoryTableProps {
   bookings: Booking[];
   isLoading: boolean;
@@ -63,6 +102,8 @@ const BookingHistoryTable: React.FC<BookingHistoryTableProps> = ({
   onCancel,
   onViewReason,
 }) => {
+  const sortedBookings = [...bookings].sort(compareBookingsByPriority);
+
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
@@ -85,7 +126,7 @@ const BookingHistoryTable: React.FC<BookingHistoryTableProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookings.map((booking) => (
+                {sortedBookings.map((booking) => (
                   <TableRow key={booking._id}>
                     <TableCell>{formatDateCell(booking.bookingDate)}</TableCell>
                     <TableCell>{booking.startTime} - {booking.endTime}</TableCell>
