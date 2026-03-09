@@ -125,10 +125,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     path: '/lecturer/booking',
   };
 
+  const lecturerHistoryMenuItem = {
+    id: 'lecturer-booking-history',
+    label: 'Booking History',
+    icon: FileText,
+    path: '/lecturer/booking-history',
+  };
+
   let menuItems = baseMenuItems;
 
   if (userScope === 'SELF') {
-    menuItems = [lecturerDemoMenuItem];
+    menuItems = [lecturerDemoMenuItem, lecturerHistoryMenuItem];
   } else if (userScope === 'CAMPUS') {
     menuItems = baseMenuItems;
   } else {

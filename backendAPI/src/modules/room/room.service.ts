@@ -24,6 +24,49 @@ export class RoomService {
     ).sort((a, b) => a - b);
   }
 
+  private toObjectId(value: any): Types.ObjectId | null {
+    const raw = value?.toString?.() || value;
+    if (!raw || !Types.ObjectId.isValid(raw)) {
+      return null;
+    }
+
+    return new Types.ObjectId(raw);
+  }
+
+  async markReservedIfActive(roomId: any): Promise<void> {
+    const roomObjectId = this.toObjectId(roomId);
+    if (!roomObjectId) {
+      return;
+    }
+
+    await this.roomModel.updateOne(
+      {
+        _id: roomObjectId,
+        isActive: { $ne: false },
+      },
+      {
+        $set: { status: 'reserved' },
+      },
+    );
+  }
+
+  async markAvailableIfNotLocked(roomId: any): Promise<void> {
+    const roomObjectId = this.toObjectId(roomId);
+    if (!roomObjectId) {
+      return;
+    }
+
+    await this.roomModel.updateOne(
+      {
+        _id: roomObjectId,
+        status: { $nin: ['occupied', 'maintenance'] },
+      },
+      {
+        $set: { status: 'available' },
+      },
+    );
+  }
+
   async create(createRoomDto: CreateRoomDto): Promise<Room> {
     try {
       const existingRoom = await this.roomModel.findOne({ 

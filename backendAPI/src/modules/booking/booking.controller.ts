@@ -27,8 +27,6 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, CampusScopeGuard, PermissionsGuard, ScopeGuard)
-@RequirePermissions('bookings.manage')
-@RequireScopes('CAMPUS')
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
@@ -86,7 +84,7 @@ export class BookingController {
     const data = await this.bookingService.createSelf(dto, user, request.campusFilter);
     return {
       success: true,
-      message: 'Tạo yêu cầu booking thành công',
+      message: 'Booking request created successfully',
       data,
     };
   }
@@ -119,12 +117,14 @@ export class BookingController {
     const data = await this.bookingService.cancelSelf(id, dto.note, user, request.campusFilter);
     return {
       success: true,
-      message: 'Hủy booking thành công',
+      message: 'Booking cancelled successfully',
       data,
     };
   }
 
   @Post()
+  @RequirePermissions('bookings.manage')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   async create(
     @Body() dto: CreateBookingDto,
     @CurrentUser() user: any,
@@ -133,12 +133,14 @@ export class BookingController {
     const data = await this.bookingService.create(dto, user, request.campusFilter);
     return {
       success: true,
-      message: 'Tạo booking thành công',
+      message: 'Booking created successfully',
       data,
     };
   }
 
   @Get()
+  @RequirePermissions('bookings.manage')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   async findAll(
     @Query() query: QueryBookingDto,
     @CurrentUser() user: any,
@@ -153,6 +155,8 @@ export class BookingController {
   }
 
   @Get(':id')
+  @RequirePermissions('bookings.manage')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   async findOne(@Param('id') id: string, @CurrentUser() user: any, @Req() request: any) {
     const data = await this.bookingService.findOne(id, user, request.campusFilter);
     return {
@@ -162,6 +166,8 @@ export class BookingController {
   }
 
   @Patch(':id')
+  @RequirePermissions('bookings.manage')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateBookingDto,
@@ -171,27 +177,31 @@ export class BookingController {
     const data = await this.bookingService.update(id, dto, user, request.campusFilter);
     return {
       success: true,
-      message: 'Cập nhật booking thành công',
+      message: 'Booking updated successfully',
       data,
     };
   }
 
   @Patch(':id/complete')
+  @RequirePermissions('bookings.manage')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   async complete(@Param('id') id: string, @CurrentUser() user: any, @Req() request: any) {
     const data = await this.bookingService.completeBooking(id, user, request.campusFilter);
     return {
       success: true,
-      message: 'Kết thúc booking thành công',
+      message: 'Booking completed successfully',
       data,
     };
   }
 
   @Delete(':id')
+  @RequirePermissions('bookings.manage')
+  @RequireScopes('CAMPUS', 'GLOBAL')
   async remove(@Param('id') id: string, @CurrentUser() user: any, @Req() request: any) {
     await this.bookingService.remove(id, user, request.campusFilter);
     return {
       success: true,
-      message: 'Xóa booking thành công',
+      message: 'Booking deleted successfully',
     };
   }
 }

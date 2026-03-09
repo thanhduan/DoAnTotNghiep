@@ -49,7 +49,7 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const LEGACY_AUTO_CANCEL_REASON = 'lecturer đã hủy booking';
+const LEGACY_AUTO_CANCEL_REASON = 'lecturer cancel booking';
 
 const formatBookingDate = (value: unknown): string => {
   if (!value) {
@@ -299,7 +299,7 @@ const BookingManagementPage: React.FC = () => {
   };
 
   const handleDelete = async (bookingId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa booking này?')) {
+    if (!window.confirm('Are you sure you want to delete this booking?')) {
       return;
     }
 
