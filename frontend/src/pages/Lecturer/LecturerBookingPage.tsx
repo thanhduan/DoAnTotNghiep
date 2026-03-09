@@ -138,7 +138,10 @@ const LecturerBookingPage: React.FC = () => {
   const loadGrid = useCallback(async () => {
     try {
       setIsLoadingGrid(true);
-      const data = await bookingService.getSelfGrid({ bookingDate: selectedDate });
+      const data = await bookingService.getSelfGrid({
+        bookingDate: selectedDate,
+        slotType: selectedSlotType,
+      });
       setGrid(data);
     } catch (error: any) {
       toast({
@@ -149,7 +152,7 @@ const LecturerBookingPage: React.FC = () => {
     } finally {
       setIsLoadingGrid(false);
     }
-  }, [selectedDate, toast]);
+  }, [selectedDate, selectedSlotType, toast]);
 
   useEffect(() => {
     loadGrid();
@@ -176,7 +179,11 @@ const LecturerBookingPage: React.FC = () => {
     }
 
     const displaySlots =
-      selectedSlotType === 'NEWSLOT' ? NEW_SLOT_DEFINITIONS : OLD_SLOT_DEFINITIONS;
+      grid.slots && grid.slots.length > 0
+        ? grid.slots
+        : selectedSlotType === 'NEWSLOT'
+          ? NEW_SLOT_DEFINITIONS
+          : OLD_SLOT_DEFINITIONS;
 
     const bookingsByRoom = new Map<string, NonNullable<LecturerBookingGrid['bookings']>>();
     (grid.bookings || []).forEach((booking) => {
@@ -257,8 +264,12 @@ const LecturerBookingPage: React.FC = () => {
   }, [grid, selectedDate, selectedSlotType]);
 
   const displaySlots = useMemo(() => {
+    if (grid?.slots && grid.slots.length > 0) {
+      return grid.slots;
+    }
+
     return selectedSlotType === 'NEWSLOT' ? NEW_SLOT_DEFINITIONS : OLD_SLOT_DEFINITIONS;
-  }, [selectedSlotType]);
+  }, [grid?.slots, selectedSlotType]);
 
 
   const openCreateDialog = (room: LecturerGridRoomRow, cell: LecturerGridCell) => {

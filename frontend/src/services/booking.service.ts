@@ -94,6 +94,7 @@ export const bookingService = {
     bookingDate?: string;
     startTime?: string;
     endTime?: string;
+    slotType?: 'OLDSLOT' | 'NEWSLOT';
   }): Promise<BookingRoomOption[]> => {
     const res = await api.get<{ success: boolean; data: BookingRoomOption[] }>(
       withQuery('/bookings/self/rooms', params),
@@ -102,7 +103,10 @@ export const bookingService = {
     return res.data || [];
   },
 
-  getSelfGrid: async (params?: { bookingDate?: string }): Promise<LecturerBookingGrid> => {
+  getSelfGrid: async (params?: {
+    bookingDate?: string;
+    slotType?: 'OLDSLOT' | 'NEWSLOT';
+  }): Promise<LecturerBookingGrid> => {
     const res = await api.get<{ success: boolean; data: LecturerBookingGrid }>(
       withQuery('/bookings/self/grid', params),
     );
