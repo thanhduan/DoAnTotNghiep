@@ -38,6 +38,46 @@ export class TransfersService {
     return result;
   }
 
+  async getSelfExistingBySourceSchedules(
+    sourceScheduleIds: string[],
+    currentUser: any,
+  ): Promise<Record<string, any>> {
+    const userId = currentUser._id?.toString?.() || currentUser._id;
+    const campusId = currentUser.campusId?.toString?.() || currentUser.campusId;
+
+    const normalizedSourceIds = Array.from(
+      new Set((sourceScheduleIds || []).map((id) => String(id || '').trim()).filter(Boolean)),
+    );
+
+    if (!normalizedSourceIds.length) {
+      return {};
+    }
+
+    const transfers = await this.transferModel
+      .find({
+        fromUserId: userId,
+        campusId,
+        fromScheduleId: { $in: normalizedSourceIds },
+        status: { $in: ['pending', 'approved'] },
+      })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+
+    return transfers.reduce(
+      (acc, item: any) => {
+        const sourceId = String(item?.fromScheduleId || '');
+        if (!sourceId || acc[sourceId]) {
+          return acc;
+        }
+
+        acc[sourceId] = item;
+        return acc;
+      },
+      {} as Record<string, any>,
+    );
+  }
+
   async cancel(id: string, currentUser: any): Promise<Transfer> {
     const transfer = await this.transferModel.findById(id);
 
@@ -54,12 +94,8 @@ export class TransfersService {
       throw new ForbiddenException('Only transfer owner or super admin can cancel transfer request');
     }
 
-    if (transfer.status === 'cancelled') {
-      throw new BadRequestException('Transfer request is already cancelled');
-    }
-
-    if (transfer.status === 'rejected') {
-      throw new BadRequestException('Cannot cancel a rejected transfer request');
+    if (transfer.status !== 'pending') {
+      throw new BadRequestException('Only pending transfer requests can be cancelled');
     }
 
     transfer.status = 'cancelled';
