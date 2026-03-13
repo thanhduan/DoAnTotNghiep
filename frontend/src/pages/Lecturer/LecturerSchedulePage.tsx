@@ -1,17 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { scheduleService } from '@/services/schedule.service';
 import { timeSlotService } from '@/services/time-slot.service';
 import bookingService from '@/services/booking.service';
-import transferService from '../../services/transfer.service';
+import transferService from '@/services/transfer.service';
 import { wsService } from '@/services/websocket.service';
 import { Schedule } from '@/types/schedule.types';
 import { TimeSlot } from '@/types/time-slot.types';
 import { Booking } from '@/types/booking.types';
 import { Card } from '@/components/ui/card';
-import { TransferRecord, TransferTargetOption } from '../../types/transfer.types';
+import { TransferRecord, TransferTargetOption } from '@/types/transfer.types';
 
 type WeekRange = { label: string; start: Date; end: Date };
 const WEEKDAYS = [
@@ -85,9 +84,6 @@ type DisplaySchedule = Schedule & {
   _virtualBooking?: boolean;
 };
 
-const TRANSFER_OPEN_MINUTES_BEFORE_SOURCE_END = 30;
-const TRANSFER_CLOSE_MINUTES_AFTER_SOURCE_END = 15;
-
 function formatDateFromScheduleInput(value: string | Date): string {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return value;
@@ -101,49 +97,39 @@ function formatDateFromScheduleInput(value: string | Date): string {
   return formatDateOnly(parsed);
 }
 
-function parseTimeToMinutes(value?: string): number {
-  const [hoursText, minutesText] = String(value || '').split(':');
-  const hours = Number(hoursText);
-  const minutes = Number(minutesText);
+function parseDateParamToDate(value: string | null): Date | null {
+  if (!value) return null;
+  const trimmed = String(value).trim();
 
-  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
-    return -1;
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const parsedIso = new Date(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T00:00:00`);
+    if (!Number.isNaN(parsedIso.getTime())) {
+      return parsedIso;
+    }
   }
 
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    return -1;
+  const viMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+\d{2}:\d{2}(?::\d{2})?)?$/);
+  if (viMatch) {
+    const parsedVi = new Date(`${viMatch[3]}-${viMatch[2]}-${viMatch[1]}T00:00:00`);
+    if (!Number.isNaN(parsedVi.getTime())) {
+      return parsedVi;
+    }
   }
 
-  return hours * 60 + minutes;
+  const fallback = new Date(trimmed);
+  if (!Number.isNaN(fallback.getTime())) {
+    return fallback;
+  }
+
+  return null;
 }
 
-function isWithinTransferRequestWindow(schedule: DisplaySchedule): boolean {
-  const dateText = formatDateFromScheduleInput(schedule.dateStart);
-  const endMinutes = parseTimeToMinutes(schedule.endTime);
-  if (!dateText || endMinutes < 0) {
-    return false;
-  }
-
-  const hours = Math.floor(endMinutes / 60);
-  const minutes = endMinutes % 60;
-  const sourceEndAt = new Date(`${dateText}T00:00:00`);
-  sourceEndAt.setHours(hours, minutes, 0, 0);
-
-  const windowStart = new Date(sourceEndAt);
-  windowStart.setMinutes(windowStart.getMinutes() - TRANSFER_OPEN_MINUTES_BEFORE_SOURCE_END);
-
-  const windowEnd = new Date(sourceEndAt);
-  windowEnd.setMinutes(windowEnd.getMinutes() + TRANSFER_CLOSE_MINUTES_AFTER_SOURCE_END);
-
-  const now = new Date();
-  return now.getTime() >= windowStart.getTime() && now.getTime() <= windowEnd.getTime();
-}
 
 const LecturerSchedulePage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { toast } = useToast();
 
   const currentYear = new Date().getFullYear();
   const initialWeeks = getWeeksOfYear(currentYear);
@@ -160,11 +146,12 @@ const LecturerSchedulePage: React.FC = () => {
   const [approvedBookings, setApprovedBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [upcomingSchedules, setUpcomingSchedules] = useState<Schedule[]>([]);
+  const [upcomingSchedules, setUpcomingSchedules] = useState<DisplaySchedule[]>([]);
   const [upcomingLoading, setUpcomingLoading] = useState<boolean>(false);
   const [detailSchedule, setDetailSchedule] = useState<Schedule | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [highlightScheduleId, setHighlightScheduleId] = useState<string | null>(null);
+  const [pendingHighlightScheduleId, setPendingHighlightScheduleId] = useState<string | null>(null);
   const [checkingTransferScheduleId, setCheckingTransferScheduleId] = useState<string | null>(null);
   const [existingTransfersBySource, setExistingTransfersBySource] = useState<Record<string, TransferRecord>>({});
   const [selectedTransfer, setSelectedTransfer] = useState<TransferRecord | null>(null);
@@ -172,7 +159,8 @@ const LecturerSchedulePage: React.FC = () => {
   const [selectedTransferTargetOption, setSelectedTransferTargetOption] = useState<TransferTargetOption | null>(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [cancellingTransfer, setCancellingTransfer] = useState(false);
-  const [recentlyCancelledTransferSourceIds, setRecentlyCancelledTransferSourceIds] = useState<Set<string>>(new Set());
+  const lastNotifiedTransferIdRef = useRef<string | null>(null);
+  const processedReturnParamsRef = useRef<string>('');
 
   useEffect(() => {
     const weeks = getWeeksOfYear(selectedYear);
@@ -415,6 +403,91 @@ const LecturerSchedulePage: React.FC = () => {
     fetchExistingTransfers();
   }, [mergedSchedules]);
 
+  const eligibleTransferSourceIds = useMemo(() => {
+    return new Set(
+      mergedSchedules
+        .filter((item) => !item._virtualBooking && ['scheduled', 'ongoing'].includes(item.status))
+        .map((item) => String(item._id || ''))
+        .filter(Boolean),
+    );
+  }, [mergedSchedules]);
+
+  const resolveTransferTargetOption = useCallback(
+    (transfer: TransferRecord): TransferTargetOption | null => {
+      if (transfer?.targetSchedule) {
+        return transfer.targetSchedule as TransferTargetOption;
+      }
+
+      const targetId = String(transfer?.toScheduleId || '').trim();
+      if (!targetId) {
+        return null;
+      }
+
+      const matchedSchedule = [...mergedSchedules, ...upcomingSchedules].find(
+        (item) => !item._virtualBooking && String(item?._id || '') === targetId,
+      );
+
+      if (matchedSchedule) {
+        const lecturer =
+          matchedSchedule.lecturerId && typeof matchedSchedule.lecturerId === 'object'
+            ? matchedSchedule.lecturerId
+            : null;
+
+        return {
+          scheduleId: String(matchedSchedule._id || ''),
+          lecturer: {
+            _id: lecturer?._id || transfer.targetLecturer?._id || '',
+            fullName: lecturer?.fullName || transfer.targetLecturer?.fullName || '',
+            email: lecturer?.email || transfer.targetLecturer?.email || '',
+          },
+          slotType: matchedSchedule.slotType || '',
+          slotNumber: Number(matchedSchedule.slotNumber || 0),
+          startTime: matchedSchedule.startTime || '',
+          endTime: matchedSchedule.endTime || '',
+          roomId:
+            typeof matchedSchedule.roomId === 'string'
+              ? matchedSchedule.roomId
+              : matchedSchedule.roomId?._id || '',
+          transferDate:
+            typeof matchedSchedule.dateStart === 'string'
+              ? matchedSchedule.dateStart
+              : matchedSchedule.dateStart?.toISOString?.(),
+        };
+      }
+
+      const matchedBooking = approvedBookings.find((item) => String(item?._id || '') === targetId);
+      if (!matchedBooking) {
+        return null;
+      }
+
+      const bookingLecturer =
+        matchedBooking.lecturerId && typeof matchedBooking.lecturerId === 'object'
+          ? matchedBooking.lecturerId
+          : null;
+
+      return {
+        scheduleId: String(matchedBooking._id || ''),
+        lecturer: {
+          _id: bookingLecturer?._id || transfer.targetLecturer?._id || '',
+          fullName: bookingLecturer?.fullName || transfer.targetLecturer?.fullName || '',
+          email: bookingLecturer?.email || transfer.targetLecturer?.email || '',
+        },
+        slotType: '',
+        slotNumber: 0,
+        startTime: matchedBooking.startTime || '',
+        endTime: matchedBooking.endTime || '',
+        roomId:
+          typeof matchedBooking.roomId === 'string'
+            ? matchedBooking.roomId
+            : matchedBooking.roomId?._id || '',
+        roomCode:
+          typeof matchedBooking.roomId === 'object' ? matchedBooking.roomId?.roomCode || '' : '',
+        transferDate: matchedBooking.bookingDate || undefined,
+      };
+    },
+    [mergedSchedules, upcomingSchedules, approvedBookings],
+  );
+
   const nextSchedule = useMemo(() => {
     const now = new Date();
     const todayStr = formatDateOnly(now);
@@ -466,31 +539,75 @@ const LecturerSchedulePage: React.FC = () => {
   }, [highlightScheduleId]);
 
   useEffect(() => {
-    const focusScheduleId = searchParams.get('focusScheduleId');
-    const focusDate = searchParams.get('focusDate');
-    const createdTransferId = searchParams.get('createdTransferId');
-
-    if (!focusScheduleId && !focusDate && !createdTransferId) {
+    if (!pendingHighlightScheduleId) {
       return;
     }
 
-    if (focusDate) {
-      const focusDateObj = new Date(`${focusDate}T00:00:00`);
-      if (!Number.isNaN(focusDateObj.getTime())) {
-        jumpToDate(focusDateObj);
+    const matched = mergedSchedules.find(
+      (item) => item._id === pendingHighlightScheduleId || item.id === pendingHighlightScheduleId,
+    );
+
+    if (!matched) {
+      return;
+    }
+
+    setHighlightScheduleId(String(matched._id || matched.id));
+    setPendingHighlightScheduleId(null);
+  }, [mergedSchedules, pendingHighlightScheduleId]);
+
+  useEffect(() => {
+    const focusScheduleId = searchParams.get('focusScheduleId');
+    const focusDate = searchParams.get('focusDate');
+    const focusRawDate = searchParams.get('focusRawDate');
+    const createdTransferId = searchParams.get('createdTransferId');
+    const paramsKey = `${focusScheduleId || ''}|${focusDate || ''}|${focusRawDate || ''}|${createdTransferId || ''}`;
+
+    if (!focusScheduleId && !focusDate && !focusRawDate && !createdTransferId) {
+      return;
+    }
+
+    if (processedReturnParamsRef.current === paramsKey) {
+      return;
+    }
+    processedReturnParamsRef.current = paramsKey;
+
+    const handleReturnParams = async () => {
+      let targetDate: Date | null = parseDateParamToDate(focusDate) || parseDateParamToDate(focusRawDate);
+
+      if (focusScheduleId) {
+        try {
+          const schedule = await scheduleService.getById(focusScheduleId);
+          const scheduleDateText = formatDateFromScheduleInput(schedule?.dateStart as any);
+          targetDate = parseDateParamToDate(scheduleDateText) || targetDate;
+        } catch {
+          // Keep query-derived date fallback when API lookup fails.
+        }
       }
-    }
 
-    if (focusScheduleId) {
-      setHighlightScheduleId(focusScheduleId);
-    }
+      if (targetDate) {
+        jumpToDate(targetDate);
+      }
 
-    if (createdTransferId) {
-      window.alert('Transfer request created successfully');
-    }
+      if (focusScheduleId) {
+        setPendingHighlightScheduleId(focusScheduleId);
+      }
 
-    setSearchParams({}, { replace: true });
-  }, [searchParams, setSearchParams]);
+      if (createdTransferId && lastNotifiedTransferIdRef.current !== createdTransferId) {
+        lastNotifiedTransferIdRef.current = createdTransferId;
+        window.alert('Transfer request created successfully');
+
+        // Refresh immediately so transfer badges/state appear without manual reload.
+        void fetchWeekSchedules();
+        if (timeSlots.length > 0) {
+          void fetchUpcomingSchedules();
+        }
+      }
+
+      setSearchParams({}, { replace: true });
+    };
+
+    void handleReturnParams();
+  }, [searchParams, setSearchParams, fetchWeekSchedules, fetchUpcomingSchedules, timeSlots.length]);
 
   const getCell = (slot: TimeSlot, weekdayIdx: number) => {
     const dateStr = formatDateOnly(weekDates[weekdayIdx]);
@@ -512,127 +629,29 @@ const LecturerSchedulePage: React.FC = () => {
       return false;
     }
 
-    if (!['scheduled', 'ongoing'].includes(schedule.status)) {
-      return false;
-    }
-
-    if (!isWithinTransferRequestWindow(schedule)) {
-      return false;
-    }
-
-    return true;
+    return eligibleTransferSourceIds.has(schedule._id);
   };
 
   const handleCreateTransfer = async (schedule: DisplaySchedule) => {
     const existing = existingTransfersBySource[schedule._id];
     if (existing) {
-      setRecentlyCancelledTransferSourceIds((prev) => {
-        if (!prev.has(schedule._id)) return prev;
-        const next = new Set(prev);
-        next.delete(schedule._id);
-        return next;
-      });
-    }
-
-    if (existing) {
-      try {
-        setCheckingTransferScheduleId(schedule._id);
-        setSelectedTransfer(existing);
-        setSelectedTransferSourceSchedule(schedule);
-        setSelectedTransferTargetOption(null);
-        setShowTransferModal(true);
-
-        const targetResult = await transferService.getSelfTargetOptions(schedule._id);
-        const matchedTarget =
-          targetResult.options?.find((option: TransferTargetOption) => option.scheduleId === existing.toScheduleId) || null;
-
-        setSelectedTransferTargetOption(matchedTarget);
-      } catch {
-        setSelectedTransferTargetOption(null);
-      } finally {
-        setCheckingTransferScheduleId(null);
-      }
+      setCheckingTransferScheduleId(schedule._id);
+      setSelectedTransfer(existing);
+      setSelectedTransferSourceSchedule(schedule);
+      setSelectedTransferTargetOption(resolveTransferTargetOption(existing));
+      setShowTransferModal(true);
+      setCheckingTransferScheduleId(null);
 
       return;
     }
 
     try {
       setCheckingTransferScheduleId(schedule._id);
-
-      const targetResult = await transferService.getSelfTargetOptions(schedule._id);
-      if (!targetResult.options?.length) {
-        window.alert('No eligible adjacent lecturer schedule found. Cannot create transfer for this class.');
-        return;
-      }
-
       navigate(`/lecturer/transfers/request?fromScheduleId=${schedule._id}`);
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error?.message || 'Cannot validate transfer information for this class',
-        variant: 'destructive',
-      });
+      window.alert(error?.message || 'Cannot validate transfer information for this class');
     } finally {
       setCheckingTransferScheduleId(null);
-    }
-  };
-
-  const handleCancelSelectedTransfer = async () => {
-    if (!selectedTransfer?._id) {
-      return;
-    }
-
-    if (selectedTransfer.status !== 'pending') {
-      toast({
-        title: 'Cannot cancel transfer',
-        description: 'Only pending transfer requests can be cancelled.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const confirmed = window.confirm('Are you sure you want to cancel this transfer request?');
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      setCancellingTransfer(true);
-      const cancelled = await transferService.cancel(selectedTransfer._id);
-      setSelectedTransfer(cancelled);
-
-      const sourceScheduleId = selectedTransferSourceSchedule?._id;
-      if (sourceScheduleId) {
-        setExistingTransfersBySource((prev) => {
-          const next = { ...prev };
-          delete next[sourceScheduleId];
-          return next;
-        });
-
-        setRecentlyCancelledTransferSourceIds((prev) => {
-          const next = new Set(prev);
-          next.add(sourceScheduleId);
-          return next;
-        });
-      }
-
-      toast({
-        title: 'Transfer cancelled',
-        description: 'Your transfer request has been cancelled successfully.',
-      });
-      window.alert('Cancel transfer request successfully');
-      setShowTransferModal(false);
-      setSelectedTransfer(null);
-      setSelectedTransferSourceSchedule(null);
-      setSelectedTransferTargetOption(null);
-    } catch (error: any) {
-      toast({
-        title: 'Cancel failed',
-        description: error?.message || 'Unable to cancel this transfer request.',
-        variant: 'destructive',
-      });
-    } finally {
-      setCancellingTransfer(false);
     }
   };
 
@@ -673,6 +692,39 @@ const LecturerSchedulePage: React.FC = () => {
     if (slotType === 'NEWSLOT') return 'New slot';
     if (slotType === 'OLDSLOT') return 'Old slot';
     return '-';
+  };
+
+  const handleCancelSelectedTransfer = async () => {
+    if (!selectedTransfer?._id || selectedTransfer.status !== 'pending' || cancellingTransfer) {
+      return;
+    }
+
+    try {
+      setCancellingTransfer(true);
+      const updated = await transferService.cancel(selectedTransfer._id);
+
+      setSelectedTransfer(updated);
+      setShowTransferModal(false);
+
+      if (selectedTransferSourceSchedule?._id) {
+        setExistingTransfersBySource((prev) => ({
+          ...prev,
+          [selectedTransferSourceSchedule._id]: updated,
+        }));
+      }
+
+      window.alert('Transfer request has been cancelled');
+      navigate('/lecturer/schedule', { replace: true });
+
+      await fetchWeekSchedules();
+      if (timeSlots.length > 0) {
+        await fetchUpcomingSchedules();
+      }
+    } catch (error: any) {
+      window.alert(error?.message || 'Cannot cancel transfer request');
+    } finally {
+      setCancellingTransfer(false);
+    }
   };
 
   return (
@@ -783,9 +835,6 @@ const LecturerSchedulePage: React.FC = () => {
                       {weekDates.map((date, idx) => {
                         const cell = getCell(slot, idx);
                         const existingTransfer = cell ? existingTransfersBySource[cell._id] : null;
-                        const hasRecentlyCancelledTransfer = cell
-                          ? recentlyCancelledTransferSourceIds.has(cell._id)
-                          : false;
                         const roomInfo = cell ? getRoomInfo(cell.roomId) : null;
                         const isHighlightedCell = Boolean(cell && cell._id === highlightScheduleId);
                         return (
@@ -825,7 +874,7 @@ const LecturerSchedulePage: React.FC = () => {
                                       Details
                                     </button>
 
-                                    {(existingTransfer || canCreateTransferFromSchedule(cell) || hasRecentlyCancelledTransfer) && (
+                                    {(existingTransfer || canCreateTransferFromSchedule(cell)) && (
                                       <button
                                         type="button"
                                         className={`inline-flex min-w-[96px] items-center justify-center rounded px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-80 ${
@@ -937,14 +986,24 @@ const LecturerSchedulePage: React.FC = () => {
                 <p className="font-semibold text-blue-800">Target handover</p>
                 {selectedTransferTargetOption ? (
                   <>
-                    <p className="text-gray-700">Lecturer: {selectedTransferTargetOption.lecturer.fullName || '-'}</p>
-                    <p className="text-gray-700">Email: {selectedTransferTargetOption.lecturer.email || '-'}</p>
+                    <p className="text-gray-700">
+                      Lecturer: {selectedTransferTargetOption.lecturer.fullName || selectedTransfer.targetLecturer?.fullName || '-'}
+                    </p>
+                    <p className="text-gray-700">
+                      Email: {selectedTransferTargetOption.lecturer.email || selectedTransfer.targetLecturer?.email || '-'}
+                    </p>
                     <p className="text-gray-700">
                       Slot: {getSlotTypeLabel(selectedTransferTargetOption.slotType)} #{selectedTransferTargetOption.slotNumber} ({selectedTransferTargetOption.startTime} - {selectedTransferTargetOption.endTime})
                     </p>
                   </>
                 ) : (
-                  <p className="text-gray-600">Detailed target schedule information is not available.</p>
+                  <>
+                    <p className="text-gray-700">Lecturer: {selectedTransfer.targetLecturer?.fullName || '-'}</p>
+                    <p className="text-gray-700">Email: {selectedTransfer.targetLecturer?.email || '-'}</p>
+                    <p className="text-gray-700">
+                      Slot: {getSlotTypeLabel(selectedTransfer.targetSchedule?.slotType)} #{selectedTransfer.targetSchedule?.slotNumber || '-'} ({selectedTransfer.targetSchedule?.startTime || '-'} - {selectedTransfer.targetSchedule?.endTime || '-'})
+                    </p>
+                  </>
                 )}
               </div>
 
@@ -954,25 +1013,21 @@ const LecturerSchedulePage: React.FC = () => {
               <p><span className="font-semibold">Created At:</span> {selectedTransfer.createdAt ? new Date(selectedTransfer.createdAt).toLocaleString('en-GB') : '-'}</p>
               <p><span className="font-semibold">Updated At:</span> {selectedTransfer.updatedAt ? new Date(selectedTransfer.updatedAt).toLocaleString('en-GB') : '-'}</p>
             </div>
-
-            <div className="mt-6 flex items-center justify-end gap-2">
-              {selectedTransfer.status === 'pending' && (
-                <button
-                  type="button"
-                  className="rounded border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                  onClick={handleCancelSelectedTransfer}
-                  disabled={cancellingTransfer}
-                >
-                  {cancellingTransfer ? 'Cancelling...' : 'Cancel request'}
-                </button>
-              )}
-
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 onClick={() => setShowTransferModal(false)}
               >
                 Close
+              </button>
+              <button
+                type="button"
+                className="rounded bg-rose-600 px-3 py-1.5 text-sm text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={selectedTransfer.status !== 'pending' || cancellingTransfer}
+                onClick={handleCancelSelectedTransfer}
+              >
+                {cancellingTransfer ? 'Cancelling...' : 'Cancel transfer'}
               </button>
             </div>
           </div>

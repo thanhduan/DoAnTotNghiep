@@ -1,10 +1,11 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConnectionOptions, Queue } from 'bullmq';
-import { BookingReminderJobPayload } from './notifications.types';
+import { BookingReminderJobPayload, TransferCancelledJobPayload } from './notifications.types';
 
 export const NOTIFICATION_QUEUE_NAME = 'notifications';
 export const BOOKING_REMINDER_JOB_NAME = 'booking-approval-reminder';
+export const TRANSFER_CANCELLED_JOB_NAME = 'transfer-cancelled';
 
 @Injectable()
 export class NotificationsQueueService implements OnModuleInit, OnModuleDestroy {
@@ -73,9 +74,48 @@ export class NotificationsQueueService implements OnModuleInit, OnModuleDestroy 
     }
   }
 
+  async enqueueTransferCancelled(data: TransferCancelledJobPayload): Promise<boolean> {
+    if (!this.queue) {
+      if ((process.env.NOTIFICATION_TRANSFER_CANCEL_DEBUG || 'false') === 'true') {
+        this.logger.log(
+          `[transfer-cancel-debug] Queue unavailable, skip enqueue. traceId=${data.traceId || 'n/a'}, transferId=${data.transferId}`,
+        );
+      }
+      return false;
+    }
+
+    if ((process.env.NOTIFICATION_TRANSFER_CANCEL_DEBUG || 'false') === 'true') {
+      this.logger.log(
+        `[transfer-cancel-debug] Enqueue transfer-cancelled job. traceId=${data.traceId || 'n/a'}, transferId=${data.transferId}, jobId=${this.buildTransferCancelledJobId(data.transferId)}`,
+      );
+    }
+
+    await this.queue.add(TRANSFER_CANCELLED_JOB_NAME, data, {
+      jobId: this.buildTransferCancelledJobId(data.transferId),
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+    });
+
+    if ((process.env.NOTIFICATION_TRANSFER_CANCEL_DEBUG || 'false') === 'true') {
+      this.logger.log(
+        `[transfer-cancel-debug] Enqueue transfer-cancelled job success. traceId=${data.traceId || 'n/a'}, transferId=${data.transferId}`,
+      );
+    }
+
+    return true;
+  }
+
   private buildBookingReminderJobId(bookingId: string): string {
     const safeBookingId = String(bookingId).replace(/[:\s]/g, '-');
     return `booking-reminder-${safeBookingId}`;
+  }
+
+  private buildTransferCancelledJobId(transferId: string): string {
+    const safeTransferId = String(transferId).replace(/[:\s]/g, '-');
+    return `transfer-cancelled-${safeTransferId}`;
   }
 
   private getRedisOptions(): Record<string, any> {

@@ -2,7 +2,6 @@ import api from './api.service';
 import {
   CreateTransferDto,
   TransferRecord,
-  TransferTargetOptionsResponse,
 } from '../types/transfer.types';
 
 const transferService = {
@@ -33,15 +32,6 @@ const transferService = {
     );
 
     return res.data || {};
-  },
-
-  getSelfTargetOptions: async (fromScheduleId: string): Promise<TransferTargetOptionsResponse> => {
-    const query = new URLSearchParams({ fromScheduleId }).toString();
-    const res = await api.get<{ success: boolean; data: TransferTargetOptionsResponse }>(
-      `/transfers/self/target-options?${query}`,
-    );
-
-    return res.data || { options: [] };
   },
 };
 

@@ -16,3 +16,21 @@ export interface BookingReminderJobPayload {
   bookingId: string;
   campusId: string;
 }
+
+export interface TransferCancelledJobPayload {
+  transferId: string;
+  traceId?: string | null;
+  status?: string | null;
+  campusId?: string | null;
+  fromUserId?: string | null;
+  toUserId?: string | null;
+  actorId?: string | null;
+  actorName?: string | null;
+  roomId?: string | null;
+  lockerId?: string | null;
+  fromScheduleId?: string | null;
+  toScheduleId?: string | null;
+  transferDate?: string | Date | null;
+  reason?: string | null;
+  notes?: string | null;
+}

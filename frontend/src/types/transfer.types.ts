@@ -18,6 +18,12 @@ export interface TransferRecord {
   cancelledAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  targetSchedule?: TransferTargetOption | null;
+  targetLecturer?: {
+    _id?: string;
+    fullName?: string;
+    email?: string;
+  } | null;
 }
 
 export interface TransferTargetOption {
@@ -33,10 +39,27 @@ export interface TransferTargetOption {
   endTime: string;
   roomId?: string;
   roomCode?: string;
+  transferDate?: string;
 }
 
 export interface TransferTargetOptionsResponse {
   options: TransferTargetOption[];
+}
+
+export interface TransferSourceSchedule {
+  id: string;
+  classCode: string;
+  subjectCode: string;
+  subjectName: string;
+  dateStart?: string | null;
+  startTime: string;
+  endTime: string;
+  slotType: 'OLDSLOT' | 'NEWSLOT' | string;
+  slotNumber: number;
+  roomId?: string;
+  roomCode?: string;
+  roomName?: string;
+  building?: string;
 }
 
 export interface CreateTransferDto {

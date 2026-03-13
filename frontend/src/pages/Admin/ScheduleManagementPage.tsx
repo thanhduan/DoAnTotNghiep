@@ -412,10 +412,6 @@ const ScheduleManagementPage: React.FC = () => {
       
       const normalizedErrors = normalizeErrors(result.data.errors || []);
       
-      console.log('Import result data:', result.data);
-      console.log('Raw errors:', result.data.errors);
-      console.log('Normalized errors:', normalizedErrors);
-      
       setImportResult({
         success: result.success,
         inserted,

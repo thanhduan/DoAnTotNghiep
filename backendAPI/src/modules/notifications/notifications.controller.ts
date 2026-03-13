@@ -4,7 +4,6 @@ import { CampusScopeGuard } from '@/common/guards/campus-scope.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { ScopeGuard } from '@/common/guards/scope.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { RequirePermissions } from '@/common/decorators/permissions.decorator';
 import { RequireScopes } from '@/common/decorators/scopes.decorator';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 import { NotificationsService } from './notifications.service';
@@ -15,7 +14,6 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  @RequirePermissions('notifications.read')
   @RequireScopes('SELF', 'CAMPUS', 'GLOBAL')
   async findMine(
     @Query() query: QueryNotificationsDto,
@@ -30,7 +28,6 @@ export class NotificationsController {
   }
 
   @Get('unread-count')
-  @RequirePermissions('notifications.read')
   @RequireScopes('SELF', 'CAMPUS', 'GLOBAL')
   async getUnreadCount(@CurrentUser() user: any, @Req() request: any) {
     const unreadCount = await this.notificationsService.getUnreadCount(user, request.campusFilter);
@@ -41,7 +38,6 @@ export class NotificationsController {
   }
 
   @Patch('read-all')
-  @RequirePermissions('notifications.read')
   @RequireScopes('SELF', 'CAMPUS', 'GLOBAL')
   async markAllAsRead(@CurrentUser() user: any, @Req() request: any) {
     const updated = await this.notificationsService.markAllAsRead(user, request.campusFilter);
@@ -53,7 +49,6 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  @RequirePermissions('notifications.read')
   @RequireScopes('SELF', 'CAMPUS', 'GLOBAL')
   async markAsRead(@Param('id') id: string, @CurrentUser() user: any, @Req() request: any) {
     const data = await this.notificationsService.markAsRead(id, user, request.campusFilter);

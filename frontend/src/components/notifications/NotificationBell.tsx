@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import notificationsService from '@/services/notifications.service';
+import { scheduleService } from '@/services/schedule.service';
 import wsService from '@/services/websocket.service';
 import { AppNotification } from '@/types/notification.types';
 
@@ -23,7 +24,7 @@ const formatNotificationTime = (value: string): string => {
     return '';
   }
 
-  return date.toLocaleString('vi-VN', {
+  return date.toLocaleString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
     day: '2-digit',
@@ -31,17 +32,118 @@ const formatNotificationTime = (value: string): string => {
   });
 };
 
+const toDateOnly = (value?: string | Date | null): string => {
+  if (!value) return '';
+
+  if (typeof value === 'string') {
+    const isoMatch = value.match(/^\d{4}-\d{2}-\d{2}/);
+    if (isoMatch) {
+      return isoMatch[0];
+    }
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const toEnglishNotificationCopy = (type: string, title: string, message: string) => {
+  let nextTitle = title;
+  let nextMessage = message;
+
+  const normalizedType = String(type || '').trim();
+  const normalizedTitle = String(title || '').trim();
+  const normalizedMessage = String(message || '').trim();
+
+  if (normalizedType === 'booking_pending') {
+    if (/^booking\s+mới\s+cần\s+duyệt\s*:/i.test(normalizedTitle)) {
+      nextTitle = normalizedTitle.replace(/^booking\s+mới\s+cần\s+duyệt\s*:/i, 'New booking needs approval:');
+    }
+
+    const createdMatch = normalizedMessage.match(/^(.+?)\s+vừa\s+tạo\s+yêu\s+cầu\s+booking\s+phòng\s+(.+)$/i);
+    if (createdMatch?.[1] && createdMatch?.[2]) {
+      nextMessage = `${createdMatch[1]} created a booking request for room ${createdMatch[2]}`;
+    }
+  }
+
+  if (normalizedType === 'booking_pending_reminder') {
+    if (/^nhắc\s+duyệt\s+booking\s*:/i.test(normalizedTitle)) {
+      nextTitle = normalizedTitle.replace(/^nhắc\s+duyệt\s+booking\s*:/i, 'Booking approval reminder:');
+    }
+
+    const pendingMatch = normalizedMessage.match(/^booking\s+của\s+(.+?)\s+vẫn\s+đang\s+chờ\s+duyệt$/i);
+    if (pendingMatch?.[1]) {
+      nextMessage = `${pendingMatch[1]}'s booking is still pending approval`;
+    }
+  }
+
+  if (normalizedType === 'booking_approved') {
+    if (/^booking\s+đã\s+được\s+duyệt\s*:/i.test(normalizedTitle)) {
+      nextTitle = normalizedTitle.replace(/^booking\s+đã\s+được\s+duyệt\s*:/i, 'Booking approved:');
+    }
+
+    const approvedMatch = normalizedMessage.match(/^yêu\s+cầu\s+booking\s+phòng\s+(.+?)\s+của\s+bạn\s+đã\s+được\s+duyệt$/i);
+    if (approvedMatch?.[1]) {
+      nextMessage = `Your booking request for room ${approvedMatch[1]} has been approved`;
+    }
+  }
+
+  if (normalizedType === 'booking_rejected') {
+    if (/^booking\s+bị\s+từ\s+chối\s*:/i.test(normalizedTitle)) {
+      nextTitle = normalizedTitle.replace(/^booking\s+bị\s+từ\s+chối\s*:/i, 'Booking rejected:');
+    }
+
+    const rejectedWithReasonMatch = normalizedMessage.match(
+      /^yêu\s+cầu\s+booking\s+phòng\s+(.+?)\s+bị\s+từ\s+chối\.\s*lý\s+do\s*:\s*(.+)$/i,
+    );
+    if (rejectedWithReasonMatch?.[1] && rejectedWithReasonMatch?.[2]) {
+      nextMessage = `Your booking request for room ${rejectedWithReasonMatch[1]} was rejected. Reason: ${rejectedWithReasonMatch[2]}`;
+    } else {
+      const rejectedMatch = normalizedMessage.match(/^yêu\s+cầu\s+booking\s+phòng\s+(.+?)\s+của\s+bạn\s+đã\s+bị\s+từ\s+chối$/i);
+      if (rejectedMatch?.[1]) {
+        nextMessage = `Your booking request for room ${rejectedMatch[1]} has been rejected`;
+      }
+    }
+  }
+
+  if (normalizedType === 'transfer_cancelled') {
+    const actorMatch = normalizedMessage.match(/^(.+?)\s+đã\s+hủy\s+một\s+yêu\s+cầu\s+bàn\s+giao\.?$/i);
+    if (actorMatch?.[1]) {
+      nextMessage = `${actorMatch[1]} cancelled a transfer request`;
+    }
+
+    if (/^yêu\s+cầu\s+bàn\s+giao\s+đã\s+bị\s+hủy\.?$/i.test(normalizedTitle)) {
+      nextTitle = 'Transfer request has been cancelled';
+    }
+  }
+
+  return {
+    title: nextTitle,
+    message: nextMessage,
+  };
+};
+
 const normalizeIncomingNotification = (payload: any, userId: string): AppNotification => {
   const nowIso = new Date().toISOString();
+  const type = payload?.type || 'info';
+  const title = payload?.title || 'New notification';
+  const message = payload?.message || '';
+  const translatedCopy = toEnglishNotificationCopy(type, title, message);
 
   return {
     _id: payload?._id || `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     recipientId: payload?.recipientId || userId,
     senderId: payload?.senderId || null,
     campusId: payload?.campusId || null,
-    type: payload?.type || 'info',
-    title: payload?.title || 'Thong bao moi',
-    message: payload?.message || '',
+    type,
+    title: translatedCopy.title,
+    message: translatedCopy.message,
     data: payload?.data || {},
     priority: payload?.priority || 'medium',
     isRead: Boolean(payload?.isRead),
@@ -70,7 +172,16 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
     try {
       setIsLoadingNotifications(true);
       const result = await notificationsService.getMyNotifications({ page: 1, limit: 12 });
-      setNotifications(result.data || []);
+      setNotifications(
+        (result.data || []).map((item) => {
+          const translatedCopy = toEnglishNotificationCopy(item.type, item.title, item.message);
+          return {
+            ...item,
+            title: translatedCopy.title,
+            message: translatedCopy.message,
+          };
+        }),
+      );
       setUnreadCount(result.meta?.unreadCount || 0);
     } catch (error) {
       console.error('Failed to load notifications', error);
@@ -136,6 +247,39 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
       navigate(userScope === 'SELF' ? '/lecturer/booking-history' : '/bookings');
     } else if (notification.type.includes('incident')) {
       navigate('/incidents');
+    } else if (notification.type.includes('transfer')) {
+      if (userScope === 'SELF') {
+        const data = (notification.data || {}) as Record<string, any>;
+        const preferredFocusScheduleId =
+          (notification.type === 'transfer_pending' ? data.toScheduleId : data.fromScheduleId) ||
+          data.fromScheduleId ||
+          data.toScheduleId ||
+          '';
+
+        let focusDate = toDateOnly(data.transferDate || data.dateStart);
+        if (preferredFocusScheduleId && !focusDate) {
+          try {
+            const focusSchedule = await scheduleService.getById(preferredFocusScheduleId);
+            focusDate = toDateOnly(focusSchedule?.dateStart);
+          } catch {
+            focusDate = '';
+          }
+        }
+
+        const query = new URLSearchParams();
+        if (preferredFocusScheduleId) {
+          query.set('focusScheduleId', preferredFocusScheduleId);
+        }
+        if (focusDate) {
+          query.set('focusDate', focusDate);
+        }
+        if (data.transferId) {
+          query.set('focusTransferId', String(data.transferId));
+        }
+
+        const suffix = query.toString();
+        navigate(suffix ? `/lecturer/schedule?${suffix}` : '/lecturer/schedule');
+      }
     }
 
     setIsNotificationOpen(false);
