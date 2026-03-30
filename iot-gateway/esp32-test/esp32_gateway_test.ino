@@ -4,6 +4,10 @@
 #include <WiFi.h>
 #include <ArduinoWebsockets.h>
 #include <ArduinoJson.h>
+// Fingerprint + LCD
+#include <Wire.h>
+#include <Adafruit_Fingerprint.h>
+#include <LiquidCrystal_I2C.h>
 
 using namespace websockets;
 
@@ -36,6 +40,147 @@ String buildWsUrl() {
 static const bool RELAY_ACTIVE_HIGH = false;
 const int RELAY_PIN = 23;
 int relayState = 0; // 0=off, 1=on
+
+// ========== FINGERPRINT & LCD CONFIG ==========
+// Adjust UART pins for your wiring
+#define FINGER_RX 16
+#define FINGER_TX 17
+HardwareSerial fingerSerial(1);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&fingerSerial);
+
+// LCD I2C (common addresses: 0x27 or 0x3F)
+// We'll detect the I2C address at runtime and create the LCD instance accordingly
+LiquidCrystal_I2C *lcd = nullptr;
+
+// Safe LCD helpers: perform action if lcd present, otherwise log to Serial
+void safeLcdBacklight(bool on) {
+  if (lcd) {
+    if (on) { lcd->backlight(); Serial.println("[LCD] backlight ON"); }
+    else { lcd->noBacklight(); Serial.println("[LCD] backlight OFF"); }
+  } else {
+    Serial.print("[LCD] backlight command skipped - LCD not initialized: ");
+    Serial.println(on ? "ON" : "OFF");
+  }
+}
+
+void safeLcdClear() {
+  if (lcd) { lcd->clear(); Serial.println("[LCD] clear"); }
+  else Serial.println("[LCD] clear skipped - LCD not initialized");
+}
+
+void safeLcdPrintAt(int col, int row, const String &text) {
+  if (lcd) {
+    lcd->setCursor(col, row);
+    lcd->print(text);
+    Serial.print("[LCD] print @"); Serial.print(col); Serial.print(","); Serial.print(row); Serial.print(": "); Serial.println(text);
+  } else {
+    Serial.print("[LCD] print skipped @"); Serial.print(col); Serial.print(","); Serial.print(row); Serial.print(": "); Serial.println(text);
+  }
+}
+
+void safeLcdPrintRaw(const String &text) {
+  if (lcd) { lcd->print(text); Serial.print("[LCD] print: "); Serial.println(text); }
+  else { Serial.print("[LCD] print skipped: "); Serial.println(text); }
+}
+
+enum FingerMode { F_IDLE = 0, F_WAIT_CAPTURE, F_PROCESSING };
+FingerMode fingerMode = F_IDLE;
+unsigned long fingerDeadline = 0;
+String pendingCorrelation = "";
+String pendingUserId = "";
+int pendingFingerId = -1;
+bool pendingIsRegister = false;
+int pendingAttemptCount = 0;
+const int MAX_PENDING_ATTEMPTS = 2;
+
+// helper to send fingerprint payload to gateway
+extern WebsocketsClient wsClient;
+void sendFingerprintResult(bool matched, int fingerId, const String &fingerData, const String &userId) {
+  DynamicJsonDocument d(1024);
+  d["type"] = "fingerprint";
+  d["deviceId"] = DEVICE_ID;
+  d["matched"] = matched;
+  if (fingerId >= 0) d["fingerId"] = fingerId;
+  if (userId.length() > 0) d["userId"] = userId;
+  if (fingerData.length() > 0) d["fingerData"] = fingerData;
+  d["source"] = "esp32";
+  if (pendingCorrelation.length() > 0) d["correlationId"] = pendingCorrelation;
+  String out; serializeJson(d, out);
+  wsClient.send(out);
+}
+
+// enroll: capture twice -> createModel -> storeModel(id)
+int enrollToId(int preferId) {
+  int id = preferId > 0 ? preferId : -1;
+  // Basic flow: get two good images
+  for (int attempt = 0; attempt < 30; ++attempt) {
+    int p = finger.getImage();
+    Serial.print("[FINGER] getImage attempt="); Serial.print(attempt); Serial.print(" code="); Serial.println(p);
+    if (p == FINGERPRINT_OK) break;
+    delay(200);
+  }
+  int r = finger.image2Tz(1);
+  Serial.print("[FINGER] image2Tz(1) result="); Serial.println(r);
+  if (r != FINGERPRINT_OK) return -1;
+  delay(200);
+  // ask for second
+  unsigned long start = millis();
+  while (millis() - start < 5000) {
+    int p = finger.getImage();
+    Serial.print("[FINGER] getImage(2) code="); Serial.println(p);
+    if (p == FINGERPRINT_OK) {
+      int r2 = finger.image2Tz(2);
+      Serial.print("[FINGER] image2Tz(2) result="); Serial.println(r2);
+      if (r2 == FINGERPRINT_OK) break;
+    }
+    delay(200);
+  }
+  int cm = finger.createModel();
+  Serial.print("[FINGER] createModel result="); Serial.println(cm);
+  if (cm != FINGERPRINT_OK) return -1;
+  // choose an id: if preferId valid, use it, else find first free slot (simple linear lookup)
+  if (id <= 0) {
+    for (int tryId = 1; tryId < 200; ++tryId) {
+      int st = finger.storeModel(tryId);
+      Serial.print("[FINGER] storeModel tryId="); Serial.print(tryId); Serial.print(" result="); Serial.println(st);
+      if (st == FINGERPRINT_OK) { // store will return ok only if empty or overwritten
+        return tryId;
+      }
+    }
+    return -1;
+  }
+  int stId = finger.storeModel(id);
+  Serial.print("[FINGER] storeModel prefId="); Serial.print(id); Serial.print(" result="); Serial.println(stId);
+  if (stId == FINGERPRINT_OK) return id;
+  // try brute-force storing at next free
+  for (int tryId = 1; tryId < 200; ++tryId) {
+    if (finger.storeModel(tryId) == FINGERPRINT_OK) return tryId;
+  }
+  return -1;
+}
+
+// verify: capture and search
+bool verifyAndGet(int &outId, int &outConfidence) {
+  // wait for image
+  for (int attempt = 0; attempt < 30; ++attempt) {
+    int p = finger.getImage();
+    Serial.print("[FINGER] verify getImage attempt="); Serial.print(attempt); Serial.print(" code="); Serial.println(p);
+    if (p == FINGERPRINT_OK) break;
+    delay(200);
+  }
+  int r = finger.image2Tz(1);
+  Serial.print("[FINGER] verify image2Tz(1) result="); Serial.println(r);
+  if (r != FINGERPRINT_OK) return false;
+  // search
+  int p = finger.fingerFastSearch();
+  Serial.print("[FINGER] fingerFastSearch result="); Serial.println(p);
+  if (p == FINGERPRINT_OK) {
+    outId = finger.fingerID;
+    outConfidence = finger.confidence;
+    return true;
+  }
+  return false;
+}
 
 // default unlock pulse (raised to help mechanical solenoids)
 // Updated for your hardware: 3000ms is a safe default for small lockers
@@ -314,6 +459,55 @@ void setup() {
   pinMode(RELAY_PIN, OUTPUT);
   applyRelayOutput(0);
 
+  // init I2C on standard ESP32 pins (SDA=21, SCL=22) and scan for LCD address
+  Wire.begin(21, 22);
+  Serial.println("[I2C SCAN] scanning for devices...");
+  int foundAddr = -1;
+  for (uint8_t addr = 1; addr < 127; ++addr) {
+    Wire.beginTransmission(addr);
+    uint8_t err = Wire.endTransmission();
+    if (err == 0) {
+      Serial.print("[I2C SCAN] Found 0x");
+      if (addr < 16) Serial.print('0');
+      Serial.println(addr, HEX);
+      if (addr == 0x27 || addr == 0x3F) {
+        foundAddr = addr;
+        break;
+      }
+      if (foundAddr == -1) foundAddr = addr; // keep first found as fallback
+    }
+  }
+
+  if (foundAddr == -1) {
+    Serial.println("[I2C SCAN] No I2C devices found. LCD will not be initialized.");
+  } else {
+    Serial.print("[I2C SCAN] Using I2C address 0x");
+    if (foundAddr < 16) Serial.print('0');
+    Serial.println(foundAddr, HEX);
+    lcd = new LiquidCrystal_I2C(foundAddr, 16, 2);
+    lcd->init();
+    safeLcdBacklight(true);
+    // Quick backlight sanity test: toggle a few times and log result
+    delay(200);
+    safeLcdBacklight(false);
+    delay(200);
+    safeLcdBacklight(true);
+    Serial.println("[LCD TEST] backlight toggle sequence executed");
+    safeLcdClear();
+    safeLcdPrintAt(0,0,"Booting...");
+  }
+
+  // init fingerprint serial + sensor
+  fingerSerial.begin(57600, SERIAL_8N1, FINGER_RX, FINGER_TX);
+  delay(100);
+  finger.begin(57600);
+  // verify sensor responding
+  if (finger.verifyPassword()) {
+    Serial.println("Fingerprint sensor ready");
+  } else {
+    Serial.println("Fingerprint sensor not found or failed init");
+  }
+
   // Boot self-test pulse to help validate wiring/polarity: short pulse
   Serial.println("[BOOT] starting boot self-test pulse (1500ms)");
   startUnlockPulse(1500);
@@ -390,6 +584,45 @@ void setup() {
       }
     }
 
+    // Handle fingerprint commands: allow { action: 'finger_register' | 'finger_verify', delaySeconds, userId, fingerId }
+    if (!err) {
+      if (d.containsKey("action") && d["action"].is<const char*>()) {
+        const char* a = d["action"];
+        if (a) {
+          String action = String(a);
+          action.toLowerCase();
+          if (action == "finger_register" || action == "finger_verify") {
+            // set up pending state handled in loop()
+            pendingCorrelation = "";
+            if (d.containsKey("correlationId") && d["correlationId"].is<const char*>()) {
+              const char* c = d["correlationId"];
+              if (c) pendingCorrelation = String(c);
+            }
+            pendingUserId = "";
+            if (d.containsKey("userId") && d["userId"].is<const char*>()) {
+              const char* u = d["userId"];
+              if (u) pendingUserId = String(u);
+            }
+            pendingFingerId = -1;
+            if (d.containsKey("fingerId")) pendingFingerId = d["fingerId"] | -1;
+
+            unsigned long delayS = 3;
+            if (d.containsKey("delaySeconds")) delayS = (unsigned long)(d["delaySeconds"] | 3);
+
+            pendingIsRegister = (action == "finger_register");
+            fingerMode = F_WAIT_CAPTURE;
+            fingerDeadline = millis() + (delayS * 1000UL);
+
+            safeLcdClear();
+            safeLcdPrintAt(0,0,"Please place your finger");
+            safeLcdPrintAt(0,1,"on the sensor...");
+
+            return;
+          }
+        }
+      }
+    }
+
     // Fallback: treat as command-like payload
     handleCommandMsg(data);
   });
@@ -419,6 +652,51 @@ void loop() {
 
   unsigned long now = millis();
   processUnlockPulse(now);
+
+  // Fingerprint state machine
+  if (fingerMode == F_WAIT_CAPTURE) {
+    if (millis() >= fingerDeadline) {
+      // time to capture and process
+      fingerMode = F_PROCESSING;
+      if (lcd) { lcd->clear(); lcd->setCursor(0,0); lcd->print("Scanning..."); }
+
+      if (pendingIsRegister) {
+        // perform enrollment
+        int newId = enrollToId(pendingFingerId);
+        if (newId > 0) {
+          sendFingerprintResult(true, newId, String(newId), pendingUserId);
+          if (lcd) { lcd->clear(); lcd->print("Saving ID:"); lcd->setCursor(0,1); lcd->print(newId); }
+        } else {
+          sendFingerprintResult(false, -1, "", pendingUserId);
+          if (lcd) { lcd->clear(); lcd->print("Scan failed"); }
+        }
+      } else {
+        int matchedId = -1; int conf = 0;
+        bool ok = verifyAndGet(matchedId, conf);
+        if (ok) {
+          sendFingerprintResult(true, matchedId, String(matchedId), pendingUserId);
+          if (lcd) { lcd->clear(); lcd->print("Match ID:"); lcd->setCursor(0,1); lcd->print(matchedId); }
+        } else {
+          sendFingerprintResult(false, -1, "", pendingUserId);
+          if (lcd) { lcd->clear(); lcd->print("No match"); }
+        }
+      }
+
+      // reset state after short delay
+      delay(800);
+      fingerMode = F_IDLE;
+      pendingCorrelation = "";
+      pendingUserId = "";
+      pendingFingerId = -1;
+      pendingIsRegister = false;
+      // restore heartbeat quickly
+      lastHeartbeatAt = millis();
+    } else {
+      // optional: show countdown
+      unsigned long left = (fingerDeadline > millis()) ? ((fingerDeadline - millis()) / 1000) : 0;
+      if (lcd) { lcd->setCursor(12,1); lcd->print(left); }
+    }
+  }
 
   if (wsConnected && now - lastHeartbeatAt >= HEARTBEAT_INTERVAL_MS) {
     wsClient.send(buildHeartbeatPayload());
