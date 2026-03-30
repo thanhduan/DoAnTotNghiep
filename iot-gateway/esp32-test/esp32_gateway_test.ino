@@ -55,6 +55,9 @@ Adafruit_Fingerprint finger = Adafruit_Fingerprint(&fingerSerial);
 // LCD I2C (common addresses: 0x27 or 0x3F)
 // We'll detect the I2C address at runtime and create the LCD instance accordingly
 LiquidCrystal_I2C *lcd = nullptr;
+// LCD dimensions (adjust if your display differs)
+const int LCD_COLS = 16;
+const int LCD_ROWS = 2;
 
 // Safe LCD helpers: perform action if lcd present, otherwise log to Serial
 void safeLcdBacklight(bool on) {
@@ -75,25 +78,130 @@ void safeLcdClear() {
 }
 
 void safeLcdPrintAt(int col, int row, const String &text) {
-  if (lcd) {
-    lcd->setCursor(col, row);
-    lcd->print(text);
-    if (VERBOSE_LOGS) { Serial.print("[LCD] print @"); Serial.print(col); Serial.print(","); Serial.print(row); Serial.print(": "); Serial.println(text); }
-  } else {
+  if (!lcd) {
     if (VERBOSE_LOGS) { Serial.print("[LCD] print skipped @"); Serial.print(col); Serial.print(","); Serial.print(row); Serial.print(": "); Serial.println(text); }
+    return;
   }
+  if (col < 0) col = 0;
+  if (row < 0) row = 0;
+  if (row >= LCD_ROWS) return;
+
+  int pos = 0;
+  int curCol = col;
+  int curRow = row;
+  while (pos < text.length() && curRow < LCD_ROWS) {
+    int avail = LCD_COLS - curCol;
+    if (avail <= 0) break;
+    String remaining = text.substring(pos);
+    String chunk;
+    if (remaining.length() <= avail) {
+      chunk = remaining;
+    } else {
+      String candidate = remaining.substring(0, avail);
+      int lastSpace = candidate.lastIndexOf(' ');
+      if (lastSpace > 0) {
+        chunk = candidate.substring(0, lastSpace);
+      } else {
+        // no space found in candidate, hard-break
+        chunk = candidate;
+      }
+    }
+    // trim leading spaces on new line
+    while (chunk.length() > 0 && chunk.charAt(0) == ' ') {
+      chunk = chunk.substring(1);
+      pos++;
+    }
+    lcd->setCursor(curCol, curRow);
+    lcd->print(chunk);
+    // pad to end of line to clear old chars
+    for (int i = chunk.length(); i < avail; ++i) lcd->print(' ');
+    pos += chunk.length();
+    curRow++;
+    curCol = 0; // subsequent lines start at column 0
+  }
+  if (VERBOSE_LOGS) { Serial.print("[LCD] print @"); Serial.print(col); Serial.print(","); Serial.print(row); Serial.print(": "); Serial.println(text); }
 }
 
 void safeLcdPrintRaw(const String &text) {
-  if (lcd) { lcd->print(text); if (VERBOSE_LOGS) { Serial.print("[LCD] print: "); Serial.println(text); } }
-  else if (VERBOSE_LOGS) { Serial.print("[LCD] print skipped: "); Serial.println(text); }
+  if (!lcd) {
+    if (VERBOSE_LOGS) { Serial.print("[LCD] print skipped: "); Serial.println(text); }
+    return;
+  }
+  // Print handling explicit newlines and wrapping across rows.
+  int start = 0;
+  int curRow = 0;
+  int curCol = 0;
+  while (start < text.length() && curRow < LCD_ROWS) {
+    int nl = text.indexOf('\n', start);
+    String segment = (nl == -1) ? text.substring(start) : text.substring(start, nl);
+    int pos = 0;
+    while (pos < segment.length() && curRow < LCD_ROWS) {
+      int avail = LCD_COLS - curCol;
+      if (avail <= 0) break;
+      String remaining = segment.substring(pos);
+      String chunk;
+      if (remaining.length() <= avail) {
+        chunk = remaining;
+      } else {
+        String candidate = remaining.substring(0, avail);
+        int lastSpace = candidate.lastIndexOf(' ');
+        if (lastSpace > 0) chunk = candidate.substring(0, lastSpace);
+        else chunk = candidate;
+      }
+      while (chunk.length() > 0 && chunk.charAt(0) == ' ') { chunk = chunk.substring(1); pos++; }
+      lcd->setCursor(curCol, curRow);
+      lcd->print(chunk);
+      for (int i = chunk.length(); i < avail; ++i) lcd->print(' ');
+      pos += chunk.length();
+      curRow++;
+      curCol = 0;
+    }
+    if (nl == -1) break;
+    start = nl + 1;
+  }
+  if (VERBOSE_LOGS) { Serial.print("[LCD] print: "); Serial.println(text); }
 }
 
 // Print a single-line message to LCD and Serial (used for single-shot prompts/results)
 void safeLcdOncePrintAt(int col, int row, const String &text) {
-  if (lcd) {
-    lcd->setCursor(col, row);
-    lcd->print(text);
+  // Print message wrapped across rows starting at (col,row) and clear overwritten
+  if (!lcd) {
+    Serial.print("[LCD] once @"); Serial.print(col); Serial.print(","); Serial.print(row); Serial.print(": "); Serial.println(text);
+    return;
+  }
+  if (col < 0) col = 0;
+  if (row < 0) row = 0;
+  if (row >= LCD_ROWS) return;
+
+  // Clear affected lines first
+  for (int r = row; r < LCD_ROWS; ++r) {
+    lcd->setCursor(0, r);
+    for (int i = 0; i < LCD_COLS; ++i) lcd->print(' ');
+  }
+
+  int pos = 0;
+  int curCol = col;
+  int curRow = row;
+  while (pos < text.length() && curRow < LCD_ROWS) {
+    int avail = LCD_COLS - curCol;
+    if (avail <= 0) break;
+    String remaining = text.substring(pos);
+    String chunk;
+    if (remaining.length() <= avail) {
+      chunk = remaining;
+    } else {
+      String candidate = remaining.substring(0, avail);
+      int lastSpace = candidate.lastIndexOf(' ');
+      if (lastSpace > 0) chunk = candidate.substring(0, lastSpace);
+      else chunk = candidate;
+    }
+    while (chunk.length() > 0 && chunk.charAt(0) == ' ') { chunk = chunk.substring(1); pos++; }
+    lcd->setCursor(curCol, curRow);
+    lcd->print(chunk);
+    for (int i = chunk.length(); i < avail; ++i) lcd->print(' ');
+    pos += chunk.length();
+    curRow++;
+    curCol = 0;
   }
   Serial.print("[LCD] once @"); Serial.print(col); Serial.print(","); Serial.print(row); Serial.print(": "); Serial.println(text);
 }
