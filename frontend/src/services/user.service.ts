@@ -1,11 +1,11 @@
 import api from './api.service';
-import { UserListItem } from '../types/models.types';
 import {
   CreateUserDto,
   UpdateUserDto,
   FilterUserDto,
   UserStatistics,
   UserImportResult,
+  UserListItem,
 } from '../types/user.types';
 
 export const userService = {

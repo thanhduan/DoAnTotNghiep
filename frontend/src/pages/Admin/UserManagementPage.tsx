@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import PermissionGuard from '../../components/PermissionGuard';
 import { userService } from '../../services/user.service';
 import { campusService } from '../../services/campus.service';
-import { CreateUserDto, UpdateUserDto, FilterUserDto } from '../../types/user.types';
-import { UserListItem, Campus } from '../../types/models.types';
+import { CreateUserDto, UpdateUserDto, FilterUserDto, UserListItem, UserBiometricSummary } from '../../types/user.types';
+import { Campus } from '../../types/models.types';
 import { Role } from '../../types/role.types';
 import { PERMISSIONS } from '../../utils/permissions';
 import { roleService } from '../../services/role.service';
@@ -57,6 +57,9 @@ const UserManagementPage: React.FC = () => {
   const [confirmDescription, setConfirmDescription] = useState('');
   const [confirmDestructive, setConfirmDestructive] = useState(false);
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [userDetailOpen, setUserDetailOpen] = useState(false);
+  const [detailUser, setDetailUser] = useState<UserListItem | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const campusUserOverrideRef = useRef(false);
   const { toast } = useToast();
 
@@ -201,6 +204,64 @@ const UserManagementPage: React.FC = () => {
   const handleEditUser = (user: UserListItem) => {
     setEditingUser(user);
     setShowEditModal(true);
+  };
+
+  const openUserDetail = async (userId: string) => {
+    setUserDetailOpen(true);
+    setDetailUser(null);
+    setDetailLoading(true);
+    try {
+      const data = await userService.getById(userId);
+      setDetailUser(data);
+    } catch (error: any) {
+      console.error('Error loading user detail:', error);
+      toast({
+        title: 'Error',
+        description: error?.message || 'Failed to load user details',
+        variant: 'destructive',
+      });
+      setUserDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeUserDetail = () => {
+    setUserDetailOpen(false);
+    setDetailUser(null);
+  };
+
+  const renderBiometrics = (bio: UserBiometricSummary | undefined) => {
+    if (!bio) {
+      return (
+        <p className="text-muted-foreground text-xs sm:col-span-2">
+          Biometric summary is not available for this account.
+        </p>
+      );
+    }
+    const statusBadge = (enrolled: boolean) =>
+      enrolled ? (
+        <Badge variant="secondary" className="bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+          Registered
+        </Badge>
+      ) : (
+        <Badge variant="outline">Not registered</Badge>
+      );
+    return (
+      <div className="border-t pt-3">
+        <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">Biometrics</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2">
+            <span className="text-muted-foreground text-xs">Face ID</span>
+            {statusBadge(bio.face.enrolled)}
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2">
+            <span className="text-muted-foreground text-xs">Fingerprint</span>
+            {statusBadge(bio.fingerprint.enrolled)}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const getRoleBadge = (role: string) => {
@@ -398,6 +459,9 @@ const UserManagementPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <CrudActionButtons
+                          onView={() => openUserDetail(user._id)}
+                          viewPermission={[PERMISSIONS.USERS_READ, PERMISSIONS.USERS_UPDATE]}
+                          viewTitle="View user details"
                           onEdit={() => handleEditUser(user)}
                           editPermission={PERMISSIONS.USERS_UPDATE}
                           extraActionsAfter
@@ -406,25 +470,25 @@ const UserManagementPage: React.FC = () => {
                               {user.isActive ? (
                                 <PermissionGuard permissions={[PERMISSIONS.USERS_UPDATE]}>
                                   <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 gap-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    title="Suspend user"
                                     onClick={() => handleSuspendUser(user._id, user.fullName)}
                                   >
-                                    <ShieldBan className="h-3.5 w-3.5" />
-                                    Suspend
+                                    <ShieldBan className="h-4 w-4" />
                                   </Button>
                                 </PermissionGuard>
                               ) : (
                                 <PermissionGuard permissions={[PERMISSIONS.USERS_UPDATE]}>
                                   <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 gap-1"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Activate user"
                                     onClick={() => handleActivateUser(user._id, user.fullName)}
                                   >
-                                    <UserRoundCheck className="h-3.5 w-3.5" />
-                                    Activate
+                                    <UserRoundCheck className="h-4 w-4" />
                                   </Button>
                                 </PermissionGuard>
                               )}
@@ -440,6 +504,98 @@ const UserManagementPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={userDetailOpen}
+        onOpenChange={(open) => {
+          if (!open) closeUserDetail();
+        }}
+      >
+        <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-4 overflow-hidden p-6">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>User details</DialogTitle>
+            <DialogDescription>Read-only information from the server</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+          {detailLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : detailUser ? (
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-3 border-b pb-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={detailUser.avatar} alt={detailUser.fullName} />
+                  <AvatarFallback>{detailUser.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-base font-semibold">{detailUser.fullName}</p>
+                  <p className="text-muted-foreground truncate">{detailUser.email}</p>
+                </div>
+              </div>
+              <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Role</dt>
+                  <dd className="mt-0.5">{getRoleBadge(detailUser.roleId?.roleCode || 'unknown')}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Status</dt>
+                  <dd className="mt-0.5">
+                    {detailUser.isActive ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
+                      >
+                        Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="font-normal">
+                        Suspended
+                      </Badge>
+                    )}
+                  </dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Employee / Student ID</dt>
+                  <dd className="mt-0.5">{detailUser.employeeId || detailUser.studentId || '—'}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Campus</dt>
+                  <dd className="mt-0.5">
+                    {detailUser.campusId
+                      ? [detailUser.campusId.campusCode, detailUser.campusId.campusName].filter(Boolean).join(' — ') ||
+                        '—'
+                      : '—'}
+                  </dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Department</dt>
+                  <dd className="mt-0.5">{detailUser.department?.trim() || '—'}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Phone</dt>
+                  <dd className="mt-0.5">{detailUser.phone?.trim() || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Created</dt>
+                  <dd className="mt-0.5">{new Date(detailUser.createdAt).toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Updated</dt>
+                  <dd className="mt-0.5">{new Date(detailUser.updatedAt).toLocaleString()}</dd>
+                </div>
+              </dl>
+              <div className="mt-4 grid grid-cols-1 gap-4">{renderBiometrics(detailUser.biometrics)}</div>
+            </div>
+          ) : null}
+          </div>
+          <DialogFooter className="shrink-0 border-t border-border pt-4">
+            <Button type="button" variant="outline" onClick={closeUserDetail}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create User Modal */}
       {showCreateModal && (

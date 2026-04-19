@@ -24,7 +24,7 @@ import { userService } from '../../services/user.service';
 import { Room } from '../../types/room.types';
 import { TimeSlot } from '../../types/time-slot.types';
 import { Schedule } from '../../types/schedule.types';
-import { UserListItem } from '../../types/models.types';
+import { UserListItem } from '../../types/user.types';
 import { resolveScheduleSlotInfo } from '../../utils/schedule-slot';
 
 interface Props {

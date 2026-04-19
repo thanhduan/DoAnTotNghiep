@@ -75,23 +75,3 @@ export interface Campus {
   isActive: boolean;
 }
 
-export interface UserListItem {
-  _id: string;
-  email: string;
-  fullName: string;
-  avatar?: string;
-  roleId?: {
-    _id: string;
-    roleName: string;
-    roleCode: string;
-    roleLevel: number;
-  };
-  employeeId?: string;
-  studentId?: string;
-  department?: string;
-  phone?: string;
-  campusId?: Campus;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}

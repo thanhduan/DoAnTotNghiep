@@ -22,7 +22,7 @@ import { timeSlotService } from '../../services/time-slot.service';
 import { userService } from '../../services/user.service';
 import { Room } from '../../types/room.types';
 import { TimeSlot } from '../../types/time-slot.types';
-import { UserListItem } from '../../types/models.types';
+import { UserListItem } from '../../types/user.types';
 
 interface Props {
   isOpen: boolean;

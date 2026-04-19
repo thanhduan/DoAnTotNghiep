@@ -7,7 +7,7 @@ import { userService } from '@/services/user.service';
 import { lockerService } from '@/services/locker.service';
 import roomService from '@/services/room.service';
 import { wsService } from '@/services/websocket.service';
-import { UserListItem } from '@/types/models.types';
+import { UserListItem } from '@/types/user.types';
 import { LockerEntity } from '@/types/locker.type';
 import { Room } from '@/types/room.types';
 import { Badge } from '@/components/ui/badge';

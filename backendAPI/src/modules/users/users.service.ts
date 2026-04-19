@@ -10,6 +10,7 @@ import { Model, Types } from 'mongoose';
 import { User } from '@/database/schemas/user.schema';
 import { Role } from '@/database/schemas/role.schema';
 import { Campus } from '@/database/schemas/campus.schema';
+import { FaceTemplate } from '@/database/schemas/face-template.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FilterUserDto } from './dto/filter-user.dto';
@@ -22,6 +23,11 @@ const CAMPUS_IMPORT_ALIASES: Record<string, string> = {
   fuct: 'fpt university can tho',
 };
 
+export type UserBiometricSummary = {
+  face: { enrolled: boolean };
+  fingerprint: { enrolled: boolean };
+};
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -31,7 +37,37 @@ export class UsersService {
     private roleModel: Model<Role>,
     @InjectModel(Campus.name)
     private campusModel: Model<Campus>,
+    @InjectModel(FaceTemplate.name)
+    private faceTemplateModel: Model<FaceTemplate>,
   ) {}
+
+  /**
+   * Safe biometric enrollment flags for admin detail views only.
+   * Never returns raw embeddings, faceData, or fingerprintData strings.
+   */
+  private async buildBiometricSummary(userId: string): Promise<UserBiometricSummary> {
+    if (!Types.ObjectId.isValid(userId)) {
+      return {
+        face: { enrolled: false },
+        fingerprint: { enrolled: false },
+      };
+    }
+
+    const oid = new Types.ObjectId(userId);
+    const [hasFaceTemplate, raw] = await Promise.all([
+      this.faceTemplateModel.exists({ userId: oid }).exec(),
+      this.userModel.findById(oid).select('faceData fingerprintData').lean().exec(),
+    ]);
+
+    const faceFromLegacy = !!(raw?.faceData && String(raw.faceData).trim());
+    const fingerprintEnrolled = !!(raw?.fingerprintData && String(raw.fingerprintData).trim());
+    const faceEnrolled = Boolean(hasFaceTemplate) || faceFromLegacy;
+
+    return {
+      face: { enrolled: faceEnrolled },
+      fingerprint: { enrolled: fingerprintEnrolled },
+    };
+  }
 
   private normalizeImportValue(value: any): string {
     return String(value ?? '').trim().toLowerCase();
@@ -609,7 +645,8 @@ export class UsersService {
       throw new NotFoundException(`User not found with ID: ${id}`);
     }
 
-    return user;
+    const biometrics = await this.buildBiometricSummary(id);
+    return Object.assign(user.toObject(), { biometrics });
   }
 
   /**
